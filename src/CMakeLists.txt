@@ -2,6 +2,7 @@ rock_library(odometry
     SOURCES ContactOdometry.cpp
 	    Odometry.cpp
 	    BodyState.cpp
+	    Transformation.cpp
     HEADERS ContactState.hpp
 	    Configuration.hpp
 	    BodyState.hpp

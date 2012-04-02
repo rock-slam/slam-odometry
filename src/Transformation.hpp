@@ -8,12 +8,18 @@ namespace odometry
     /** @deprecated This class should not be used for new developments. Use the 
      * Frame Transformation stack instead.
      */
-    class Transformation : public Configuration
+    //class Transformation : public Configuration
+    class Transformation
     {
     public:
 	Transformation() { updateDerived(); };
-	explicit Transformation( const Configuration& conf )
-	    : Configuration( conf ) { updateDerived(); }
+	//explicit Transformation(){ 
+	//updateDerived(); 
+	//}
+	//explicit Transformation( const Configuration& conf )
+	//    : Configuration( conf ) { updateDerived(); }
+
+	Eigen::Vector3d getFootPosition(const BodyState& state, wheelIdx wheel_idx, unsigned int foot_idx) const;
 
     public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -63,6 +69,24 @@ namespace odometry
 
 	/** update configuration values that are derived from the base values */
 	void updateDerived();
+
+	/** body to IMU fixed coordinate system */
+	base::Quaterniond R_b2i;
+	/** body to GPS fixed coordinate system */
+	base::Quaterniond R_b2g;
+	/** body to LaserScan fixed coordinate system */
+	base::Quaterniond R_b2ls;
+
+	/** xsens world to world transformation */
+	base::Quaterniond R_xw2w;
+	/** angle of the sensorhead with respect to the main body */
+	double sensorHeadAngle;
+	/* foot contact point. */
+	double wheelRadiusMax;
+	/** distance between left and right wheel */
+	double trackWidth;
+	/** distance between front and rear axle */
+	double wheelBase;
     private:
 	Eigen::Quaterniond R_y;
     };

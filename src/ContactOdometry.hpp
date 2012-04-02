@@ -13,9 +13,9 @@ typedef Eigen::Matrix<double,6,6> Matrix6d;
 typedef Eigen::Matrix<double,6,1> Vector6d;
 
 class FootContact : 
-    public base::odometry::Gaussian3D,
-    public base::odometry::Sampling3D,
-    public base::odometry::Sampling2D
+    public odometry::Gaussian3D,
+    public odometry::Sampling3D,
+    public odometry::Sampling2D
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -32,7 +32,7 @@ public:
     base::Pose2D getPoseDeltaSample2D();
 
     Eigen::Quaterniond orientation, prevOrientation;
-    base::odometry::State<BodyContactState> state;
+    odometry::State<BodyContactState> state;
 
 private:
     /** Odometry configuration */

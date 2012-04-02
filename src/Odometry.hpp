@@ -15,8 +15,6 @@
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/normal_distribution.hpp>
 
-//namespace asguard
-//{
 namespace odometry
 {
     typedef Eigen::Matrix<double,6,6> Matrix6d;
@@ -82,9 +80,9 @@ namespace odometry
      * quite easily.
      */
     class Skid4Odometry
-	: public base::odometry::Gaussian3D,
-	  public base::odometry::Sampling3D,
-	  public base::odometry::Sampling2D
+	: public odometry::Gaussian3D,
+	  public odometry::Sampling3D,
+	  public odometry::Sampling2D
     {
     public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -178,12 +176,11 @@ namespace odometry
     public:
 	/** helper member to store the current and previous bodystates
 	 */
-	base::odometry::State<odometry::BodyState> state;
+	odometry::State<odometry::BodyState> state;
 
     private:
 	/** Odometry configuration */
 	Configuration config;
-	/** Asguard configuration */
 
 	/** avg wheel radius for odometry calculations */
 	double wheelRadiusAvg;
@@ -202,6 +199,5 @@ namespace odometry
     };
 
 }
-//}
 
 #endif
