@@ -139,6 +139,15 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     const BodyState &state_kp(state.getCurrent());
     const BodyState &state_k(state.getPrevious());
 
+/*
+    printf("Wheels: %+3.3f %+3.3f %+3.3f %+3.3f \n",
+	state_kp.getWheelPos(REAR_LEFT),
+	state_kp.getWheelPos(REAR_RIGHT),
+	state_kp.getWheelPos(FRONT_RIGHT),
+	state_kp.getWheelPos(FRONT_LEFT)
+    );
+*/
+
     double d1n = (state_kp.getWheelPos(FRONT_LEFT) - state_k.getWheelPos(FRONT_LEFT) 
 	    + state_kp.getWheelPos(REAR_LEFT) - state_k.getWheelPos(REAR_LEFT) )/2.0*wheel_radius; // averaged left side distance 
     double d2n = (state_kp.getWheelPos(FRONT_RIGHT) - state_k.getWheelPos(FRONT_RIGHT) 
@@ -148,20 +157,27 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     
     double d = (d1n+d2n)/2;
     Eigen::Quaterniond delta_rotq( prevOrientation.inverse() * orientation );
-    Eigen::AngleAxisd delta_rot( delta_rotq );
+    Eigen::AngleAxisd delta_rot( delta_rotq ); 
+
+    //delta_rot * Eigen::AngleAxisd(1e-7,Eigen::Vector3d::UnitZ());
+    //printf("Delta Rot: %+3.3f %+1.5f %+1.5f",delta_rot.angle(), d1n, d2n);
+  
     if( delta_rot.angle() > 1e-8 )
     {
 	dtheta = (delta_rot.axis()*delta_rot.angle()).z();
 	double r = d/dtheta;
+	
+	dx = r*(sin(dtheta)); // displacement in x coord
+	dy = -r*(1-cos(dtheta)); // displacement in y coord
+    
+    //printf("Delta Pos: %+1.5f %+1.5f dtheta: %+1.5f r*sin(): %+1.5f r: %+1.5f d: %+1.5f\n", dx, dy, dtheta, r*sin(dtheta), r, d);
 
-	dx = r*(1-cos(dtheta)); // displacement in x coord
-	dy = r*sin(dtheta); // displacement in y coord
     }
     else
     {
-	dtheta = 0;
-	dx = 0;
-	dy = d;
+    	dtheta = 0;
+    	dx = d;
+    	dy = 0;
     }
 
     base::Pose p(Eigen::Vector3d(dx, dy, 0), delta_rotq);
@@ -173,7 +189,7 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
 	// need to account for the fact that the body origin is in the 
 	// center of the front axis
 	Eigen::Affine3d t( p.toTransform() );
-	Eigen::Affine3d C_center2body( Eigen::Translation3d( Eigen::Vector3d(0, -wheelBase/2.0, 0 ) ) );
+	Eigen::Affine3d C_center2body( Eigen::Translation3d( Eigen::Vector3d(-wheelBase/2.0, 0, 0 ) ) );
 
 	pose = base::Pose( Eigen::Affine3d( C_center2body * t * C_center2body.inverse()) );
     }
@@ -216,7 +232,7 @@ Eigen::Matrix3d Skid4Odometry::getPositionError()
     Eigen::Matrix3d error_Covariance;
     Eigen::Vector3d translation = getTranslation();
 
-    Eigen::Vector3d var(translation[1]*sin(2.0/180.0*M_PI) * 2.0, translation[1]*0.5, translation[1]*0.2);
+    Eigen::Vector3d var(translation[0]*0.5, translation[0]*sin(2.0/180.0*M_PI) * 2.0, translation[0]*0.2);
     //var += Eigen::Vector3d(0.01,0.02,0.005);
 
     return var.array().square().matrix().asDiagonal(); 
@@ -262,10 +278,7 @@ Eigen::Vector3d Skid4Odometry::getTranslation()
     //parameter do damp de velocity in the x axis
     double w_damp = 2.5;
 
-    return Eigen::Vector3d(
-	    ( (sumright-sumleft) * wheelRadiusAvg / 2 ) / trackWidth * dist_cent_rot / w_damp, 
-	    sum / 4.0 * wheelRadiusAvg, 
-	    0 );
+    return Eigen::Vector3d(sum / 4.0 * wheelRadiusAvg, ((sumright-sumleft) * wheelRadiusAvg / 2 ) / trackWidth * dist_cent_rot / w_damp, 0 );
 };
 
 Eigen::Vector3d Skid4Odometry::getVelocity()
@@ -305,7 +318,9 @@ Eigen::Vector3d Skid4Odometry::getAngularVelocity()
 
 	  // TODO explain the damping better, and maybe move it to somewhere else 
 	  //parameter do damp de velocity in the x axis
-	  return Eigen::Vector3d( (sumright-sumleft) * wheelRadiusAvg / 2 / trackWidth / 2 / d_t,0, 0 ); 
+
+	  //return Eigen::Vector3d( (sumright-sumleft) * wheelRadiusAvg / 2 / trackWidth / 2 / d_t,0, 0 ); 
+	  return Eigen::Vector3d( 0, 0, (sumright-sumleft) * wheelRadiusAvg / 2 / trackWidth / 2 / d_t ); 
     
     }
     else
@@ -343,15 +358,15 @@ Eigen::Matrix3d Skid4Odometry::getVelocityError()
   
     error_Covariance.setZero(); 
     //error in x 
+    error_Covariance(0,0)=_planar_velocity.array().abs()(1)*2*pow(10,-5)+pow(10,-12);
+    //error in y
     if(_planar_velocity.array().abs()(0)<0.08) 
-	error_Covariance(0,0)=_planar_velocity.array().abs()(1)*pow(10,-7)+pow(10,-12);
+	error_Covariance(1,1)=_planar_velocity.array().abs()(1)*pow(10,-7)+pow(10,-12);
     else 
 	if(_planar_velocity.array().abs()(0)>1.1) 
-	    error_Covariance(0,0)=_planar_velocity.array().abs()(1)*pow(10,-2)+pow(10,-12);
+	    error_Covariance(1,1)=_planar_velocity.array().abs()(1)*pow(10,-2)+pow(10,-12);
 	else
-	    error_Covariance(0,0)=_planar_velocity.array().abs()(1)*2*pow(10,-3)+pow(10,-12);
-    //error in y
-    error_Covariance(1,1)=_planar_velocity.array().abs()(1)*2*pow(10,-5)+pow(10,-12);
+	    error_Covariance(1,1)=_planar_velocity.array().abs()(1)*2*pow(10,-3)+pow(10,-12);
     //error in z 
     error_Covariance(2,2)=pow(10,-5);
 
