@@ -2,7 +2,7 @@
 
 using namespace odometry;
 
-FootContact::FootContact(const odometry::Configuration& config)
+FootContact::FootContact(const asguard::odometry::Configuration& config)
     : config( config ), sampling(config)
 {
 }
@@ -49,20 +49,20 @@ Matrix6d FootContact::getPoseError()
 
 base::Pose FootContact::getPoseDeltaSample()
 {
-    return odometry::getPoseFromVector6d( sampling.sample() );
+    return base::Pose( sampling.sample() );
 }
 
 base::Pose2D FootContact::getPoseDeltaSample2D()
 {
-    return odometry::projectPoseDelta( orientation, getPoseDeltaSample() );
+    return asguard::odometry::projectPoseDelta( orientation, getPoseDeltaSample() );
 }
 
 base::Pose FootContact::getPoseDelta()
 {
-    return odometry::getPoseFromVector6d( sampling.poseMean );
+    return base::Pose( sampling.poseMean );
 }
 
-void FootContact::update(const BodyContactState& bs, const Eigen::Quaterniond& orientation)
+void FootContact::update(const eslam::BodyContactState& bs, const Eigen::Quaterniond& orientation)
 {
     // update state
     state.update( bs );
@@ -90,17 +90,19 @@ void FootContact::update(const BodyContactState& bs, const Eigen::Quaterniond& o
     int count = 0;
     for( size_t i=0; i < state.getPrevious().points.size(); i++ )
     {
-	const BodyContactPoint &prevPoint( state.getPrevious().points[i] );
-	const BodyContactPoint &point( state.getCurrent().points[i] );
+	const eslam::BodyContactPoint &prevPoint( state.getPrevious().points[i] );
+	const eslam::BodyContactPoint &point( state.getCurrent().points[i] );
 
-	if( prevPoint.contact > contact_threshold 
-		&& point.contact > contact_threshold )
+	if( prevPoint.contact >= contact_threshold 
+		&& point.contact >= contact_threshold )
 	{
 	    sum += prevPoint.position - delta_rotq * point.position;
 	    count++;
 	}
     }
-    Eigen::Vector3d mean = sum / count;
+    Eigen::Vector3d mean = sum;
+    if( count > 0 ) 
+	mean /= count;
 
     base::Pose delta_pose( mean, delta_rotq );
     
@@ -122,7 +124,7 @@ void FootContact::update(const BodyContactState& bs, const Eigen::Quaterniond& o
     Vector6d var;
     var << 0, 0, vec.w(), vec.head<3>();
 
-    sampling.update( odometry::getVector6dFromPose(delta_pose), var.asDiagonal() );
+    sampling.update( delta_pose.toVector6d(), var.asDiagonal() );
 
     prevOrientation = orientation;
 }

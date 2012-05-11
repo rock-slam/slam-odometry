@@ -1,10 +1,9 @@
 #ifndef CONTACT_ODODOMETRY_HPP__
 #define CONTACT_ODODOMETRY_HPP__
 
-//#include <eslam/ContactModel.hpp>
-#include <odometry/ContactState.hpp>
-#include <odometry/Configuration.hpp>
-#include <odometry/Odometry.hpp>
+#include <eslam/ContactModel.hpp>
+#include <asguard/Configuration.hpp>
+#include <asguard/Odometry.hpp>
 #include <base/odometry.h>
 
 namespace odometry
@@ -13,14 +12,14 @@ typedef Eigen::Matrix<double,6,6> Matrix6d;
 typedef Eigen::Matrix<double,6,1> Vector6d;
 
 class FootContact : 
-    public odometry::Gaussian3D,
-    public odometry::Sampling3D,
-    public odometry::Sampling2D
+    public base::odometry::Gaussian3D,
+    public base::odometry::Sampling3D,
+    public base::odometry::Sampling2D
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    FootContact(const odometry::Configuration& config);
-    void update(const BodyContactState& state, const Eigen::Quaterniond& orientation);
+    FootContact(const asguard::odometry::Configuration& config);
+    void update(const eslam::BodyContactState& state, const Eigen::Quaterniond& orientation);
 
     base::Pose getPoseDelta();
     Eigen::Matrix3d getPositionError();
@@ -32,13 +31,13 @@ public:
     base::Pose2D getPoseDeltaSample2D();
 
     Eigen::Quaterniond orientation, prevOrientation;
-    odometry::State<BodyContactState> state;
+    base::odometry::State<eslam::BodyContactState> state;
 
 private:
     /** Odometry configuration */
-    odometry::Configuration config;
+    asguard::odometry::Configuration config;
 
-    odometry::GaussianSamplingPose3D sampling;
+    asguard::odometry::GaussianSamplingPose3D sampling;
 };
 
 }

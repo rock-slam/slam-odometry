@@ -1,14 +1,12 @@
-#ifndef __ASGUARDODOMETRY_HPP__
-#define __ASGUARDODOMETRY_HPP__
+#ifndef __ODOMETRY_ODOMETRY_HPP__
+#define __ODOMETRY_ODOMETRY_HPP__
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <Eigen/LU>
 #include <base/time.h>
 #include <base/pose.h>
 #include <base/odometry.h>
 
-#include "Configuration.hpp"
+#include <odometry/Configuration.hpp>
+#include <odometry/BodyState.hpp>
 
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/uniform_real.hpp>
