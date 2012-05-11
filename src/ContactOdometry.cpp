@@ -62,7 +62,7 @@ base::Pose FootContact::getPoseDelta()
     return base::Pose( sampling.poseMean );
 }
 
-void FootContact::update(const eslam::BodyContactState& bs, const Eigen::Quaterniond& orientation)
+void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quaterniond& orientation)
 {
     // update state
     state.update( bs );
@@ -90,8 +90,8 @@ void FootContact::update(const eslam::BodyContactState& bs, const Eigen::Quatern
     int count = 0;
     for( size_t i=0; i < state.getPrevious().points.size(); i++ )
     {
-	const eslam::BodyContactPoint &prevPoint( state.getPrevious().points[i] );
-	const eslam::BodyContactPoint &point( state.getCurrent().points[i] );
+	const odometry::BodyContactPoint &prevPoint( state.getPrevious().points[i] );
+	const odometry::BodyContactPoint &point( state.getCurrent().points[i] );
 
 	if( prevPoint.contact >= contact_threshold 
 		&& point.contact >= contact_threshold )

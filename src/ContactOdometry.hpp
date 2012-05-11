@@ -1,7 +1,7 @@
-#ifndef CONTACT_ODODOMETRY_HPP__
-#define CONTACT_ODODOMETRY_HPP__
+#ifndef ODOMETRY_FOOT_CONTACT_HPP__ 
+#define ODOMETRY_FOOT_CONTACT_HPP__
 
-#include <eslam/ContactModel.hpp>
+#include <odometry/ContactState.hpp>
 #include <odometry/Gaussian.hpp>
 #include <odometry/Configuration.hpp>
 #include <base/odometry.h>
@@ -19,7 +19,7 @@ class FootContact :
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     FootContact(const Configuration& config);
-    void update(const eslam::BodyContactState& state, const Eigen::Quaterniond& orientation);
+    void update(const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation);
 
     base::Pose getPoseDelta();
     Eigen::Matrix3d getPositionError();
@@ -31,7 +31,7 @@ public:
     base::Pose2D getPoseDeltaSample2D();
 
     Eigen::Quaterniond orientation, prevOrientation;
-    base::odometry::State<eslam::BodyContactState> state;
+    base::odometry::State<odometry::BodyContactState> state;
 
 private:
     /** Odometry configuration */

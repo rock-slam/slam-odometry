@@ -5,7 +5,7 @@
 #include <base/time.h>
 #include <vector>
 
-namespace eslam
+namespace odometry
 {
 
 struct BodyContactPoint
