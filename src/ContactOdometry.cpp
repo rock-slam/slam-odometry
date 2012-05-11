@@ -2,7 +2,7 @@
 
 using namespace odometry;
 
-FootContact::FootContact(const asguard::odometry::Configuration& config)
+FootContact::FootContact(const Configuration& config)
     : config( config ), sampling(config)
 {
 }
@@ -54,7 +54,7 @@ base::Pose FootContact::getPoseDeltaSample()
 
 base::Pose2D FootContact::getPoseDeltaSample2D()
 {
-    return asguard::odometry::projectPoseDelta( orientation, getPoseDeltaSample() );
+    return projectPoseDelta( orientation, getPoseDeltaSample() );
 }
 
 base::Pose FootContact::getPoseDelta()

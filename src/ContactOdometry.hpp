@@ -2,8 +2,8 @@
 #define CONTACT_ODODOMETRY_HPP__
 
 #include <eslam/ContactModel.hpp>
-#include <asguard/Configuration.hpp>
-#include <asguard/Odometry.hpp>
+#include <odometry/Gaussian.hpp>
+#include <odometry/Configuration.hpp>
 #include <base/odometry.h>
 
 namespace odometry
@@ -18,7 +18,7 @@ class FootContact :
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    FootContact(const asguard::odometry::Configuration& config);
+    FootContact(const Configuration& config);
     void update(const eslam::BodyContactState& state, const Eigen::Quaterniond& orientation);
 
     base::Pose getPoseDelta();
@@ -35,9 +35,9 @@ public:
 
 private:
     /** Odometry configuration */
-    asguard::odometry::Configuration config;
+    Configuration config;
 
-    asguard::odometry::GaussianSamplingPose3D sampling;
+    GaussianSamplingPose3D sampling;
 };
 
 }
