@@ -1,5 +1,5 @@
-#ifndef __ESLAM_CONTACTSTATE_HPP__
-#define __ESLAM_CONTACTSTATE_HPP__
+#ifndef ODOMETRY_CONTACTSTATE_HPP__
+#define ODOMETRY_CONTACTSTATE_HPP__
 
 #include <base/eigen.h>
 #include <base/time.h>
