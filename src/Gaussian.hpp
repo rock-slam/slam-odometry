@@ -58,8 +58,7 @@ protected:
     Configuration config;
 
     /** random number generator */
-    boost::minstd_rand rand_gen;
-    boost::variate_generator<boost::minstd_rand&, boost::normal_distribution<> > rand_norm;
+    boost::variate_generator<boost::minstd_rand, boost::normal_distribution<> > rand_norm;
 };
 
 }

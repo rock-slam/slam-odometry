@@ -46,8 +46,7 @@ GaussianSamplingPose3D::GaussianSamplingPose3D( const Configuration& config ) :
     poseMean( Vector6d::Zero() ),
     modelError( Matrix6d::Identity() * 1e-8 ), 
     config( config ), 
-    rand_gen( config.seed ),
-    rand_norm(rand_gen, boost::normal_distribution<>(0,1.0) )
+    rand_norm( boost::minstd_rand( config.seed ), boost::normal_distribution<>(0,1.0) )
 {
 }
 
