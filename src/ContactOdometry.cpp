@@ -87,6 +87,7 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 
     const double contact_threshold = 0.5;
     Eigen::Vector3d sum = Eigen::Vector3d::Zero();
+    double zeroCheck = 0;
     int count = 0;
     for( size_t i=0; i < state.getPrevious().points.size(); i++ )
     {
@@ -97,6 +98,8 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 		&& point.contact >= contact_threshold )
 	{
 	    sum += prevPoint.position - delta_rotq * point.position;
+	    if( config.useZeroVelocity )
+		zeroCheck += (prevPoint.position - point.position).squaredNorm();
 	    count++;
 	}
     }
@@ -105,7 +108,7 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 	mean /= count;
 
     base::Pose delta_pose( mean, delta_rotq );
-    
+
     // calculate error matrix
     // TODO this is based on the wheel odometry error model I think it could be
     // more accurate by looking the the covariance of the contact position
@@ -120,6 +123,13 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 	d * config.distError.toVector4d() +
 	tilt * config.tiltError.toVector4d() +
 	dtheta * config.dthetaError.toVector4d();
+
+    const double zeroVelocityThreshold = 1e-9;
+    if( config.useZeroVelocity && zeroCheck < zeroVelocityThreshold )
+    {
+	delta_pose = base::Pose();
+	vec.setZero();
+    }
 
     Vector6d var;
     var << 0, 0, vec.w(), vec.head<3>();

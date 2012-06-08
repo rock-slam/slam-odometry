@@ -25,6 +25,13 @@ struct Configuration
     TranslationWithYaw distError;
     TranslationWithYaw tiltError;
     TranslationWithYaw dthetaError;
+
+    /** 
+     * set this to true, if the odometry should look 
+     * for zero velocity updates, in which orientation
+     * changes from the imu are ignored.
+     */
+    bool useZeroVelocity;
 };
 }
 
