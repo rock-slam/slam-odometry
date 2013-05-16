@@ -51,9 +51,6 @@ public:
     Matrix6d poseCov, poseLT;
     Vector6d poseMean;
 
-    /** constant model error that is added to the dynamic calculation of the error */
-    Matrix6d modelError;
-
 protected:
     Configuration config;
 
