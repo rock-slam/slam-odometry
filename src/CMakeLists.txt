@@ -10,5 +10,9 @@ rock_library(odometry
 	    Odometry.hpp
 	    ContactOdometry.hpp
 	    Gaussian.hpp
+            KinematicModelBase.hpp
+            KinematicModel.hpp
+            MotionModelBase.hpp
+            MotionModel.hpp
     DEPS_PKGCONFIG base-types)
 

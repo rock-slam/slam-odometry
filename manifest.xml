@@ -7,6 +7,7 @@
       here. 
   </description>
   <author>Jakob Schwendner/jakob.schwendner@dfki.de</author>
+  <author>Javier Hidalgo Carrio/javier.hidalgo_carrio@dfki.de</author>
   <depend package="base/types" />
   <tags>needs_opt</tags>
 </package>
