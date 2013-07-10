@@ -205,12 +205,12 @@ namespace odometry
                 Weight.setIdentity();
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
-                std::cout<< "spareI is of size "<<spareI.rows()<<"x"<<spareI.cols()<<"\n";
-                std::cout << "The spareI matrix \n" << spareI << std::endl;
-                std::cout<< "unknownA is of size "<<unknownA.rows()<<"x"<<unknownA.cols()<<"\n";
-                std::cout << "The unknownA matrix \n" << unknownA << std::endl;
-                std::cout<< "knownB is of size "<<knownB.rows()<<"x"<<knownB.cols()<<"\n";
-                std::cout << "The knownB matrix \n" << knownB << std::endl;
+                std::cout<< "[MOTION_MODEL] spareI is of size "<<spareI.rows()<<"x"<<spareI.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] The spareI matrix \n" << spareI << std::endl;
+                std::cout<< "[MOTION_MODEL] unknownA is of size "<<unknownA.rows()<<"x"<<unknownA.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] The unknownA matrix \n" << unknownA << std::endl;
+                std::cout<< "[MOTION_MODEL] knownB is of size "<<knownB.rows()<<"x"<<knownB.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] The knownB matrix \n" << knownB << std::endl;
                 #endif
 
                 return;
@@ -272,7 +272,7 @@ namespace odometry
                     std::cout<<" number: "<<(*it).number<<" contactId: "<<(*it).contactId;
                 }
 
-                std::cout<<"\nEND\n";
+                std::cout<<"\n[MOTION_MODEL] **** END ****\n";
                 #endif
 
                 return;
@@ -308,6 +308,29 @@ namespace odometry
                 return;
             }
 
+            inline virtual void getKinematics (std::vector<Eigen::Affine3d> &currentFkRobot, std::vector<base::Matrix6d> &currentFkCov)
+            {
+                currentFkRobot = this->fkRobot;
+                currentFkCov = this->fkCov;
+
+                return;
+            }
+
+            virtual std::vector< int > getPointsInContact ()
+            {
+                register int i=0;
+                std::vector<int> contactId (_RobotTrees, 0);
+
+                for (std::vector<TreeContactPoint>::iterator it = contactPoints.begin() ; it != contactPoints.end(); it++)
+                {
+                    contactId[i] = (*it).contactId;
+                    i++;
+                }
+
+                return contactId;
+            }
+
+
 
             virtual double navSolver(const Eigen::Matrix <_Scalar, MODEL_DOF, 1> &modelPositions,
                                             Eigen::Matrix <_Scalar, 6, 1> &cartesianVelocities,
@@ -330,11 +353,11 @@ namespace odometry
                 Weight.setZero();
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
-                std::cout << "cartesianVelocities is of size "<<cartesianVelocities.rows()<<"x"<<cartesianVelocities.cols()<<"\n";
-                std::cout << "cartesianVelocities is \n" << cartesianVelocities<< std::endl;
+                std::cout << "[MOTION_MODEL] cartesianVelocities is of size "<<cartesianVelocities.rows()<<"x"<<cartesianVelocities.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] cartesianVelocities is \n" << cartesianVelocities<< std::endl;
 
-                std::cout << "modelVelocities is of size "<<modelVelocities.rows()<<"x"<<modelVelocities.cols()<<"\n";
-                std::cout << "modelVelocities is \n" << modelVelocities<< std::endl;
+                std::cout << "[MOTION_MODEL] modelVelocities is of size "<<modelVelocities.rows()<<"x"<<modelVelocities.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] modelVelocities is \n" << modelVelocities<< std::endl;
                 #endif
 
                 /** Copy Eigen to vector **/
@@ -343,9 +366,10 @@ namespace odometry
                 /** Solve the Robot Jacobian Matrix **/
                 J = robotModel->jacobianSolver (vectorPositions);
 
-                std::cout<< "J is of size "<<J.rows()<<"x"<<J.cols()<<"\n";
-                std::cout << "The J matrix \n" << J << std::endl;
-
+                #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
+                std::cout<< "[MOTION_MODEL] J is of size "<<J.rows()<<"x"<<J.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] The J matrix \n" << J << std::endl;
+                #endif
 
                 /** Form the Composite Navigation Equations and Noise Covariance **/
                 this->navEquations (cartesianVelocities, modelVelocities, J,
@@ -364,16 +388,16 @@ namespace odometry
                 matrixConjType Conj;
 
                 Eigen::FullPivLU<matrixAType> lu_decompA(unknownA);
-                std::cout << "The rank of A is " << lu_decompA.rank() << std::endl;
+                std::cout << "[MOTION_MODEL] The rank of A is " << lu_decompA.rank() << std::endl;
 
                 Eigen::FullPivLU<matrixBType> lu_decompB(knownB);
-                std::cout << "The rank of B is " << lu_decompB.rank() << std::endl;
+                std::cout << "[MOTION_MODEL] The rank of B is " << lu_decompB.rank() << std::endl;
 
                 Conj.template block<6*_RobotTrees,3+_RobotTrees+(_RobotTrees*_ContactDoF)>(0,0) = unknownA;
                 Conj.template block<6*_RobotTrees, 1>(0,3+_RobotTrees+(_RobotTrees*_ContactDoF)) = knownb;
                 Eigen::FullPivLU<matrixConjType> lu_decompConj(Conj);
-                std::cout << "The rank of A|B*y is " << lu_decompConj.rank() << std::endl;
-                std::cout << "Pseudoinverse of A\n" << (unknownA.transpose() * Weight * unknownA).inverse() << std::endl;
+                std::cout << "[MOTION_MODEL] The rank of A|B*y is " << lu_decompConj.rank() << std::endl;
+                std::cout << "[MOTION_MODEL] Pseudoinverse of A\n" << (unknownA.transpose() * Weight * unknownA).inverse() << std::endl;
                 /*******************/
                 #endif
 
@@ -404,11 +428,16 @@ namespace odometry
                 }
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
-                std::cout << "cartesianVelocities is of size "<<cartesianVelocities.rows()<<"x"<<cartesianVelocities.cols()<<"\n";
-                std::cout << "cartesianVelocities is \n" << cartesianVelocities<< std::endl;
+                std::cout << "[MOTION_MODEL] L-S solution:\n"<<unknownx<<std::endl;
+                std::cout << "[MOTION_MODEL] cartesianVelocities is of size "<<cartesianVelocities.rows()<<"x"<<cartesianVelocities.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] cartesianVelocities is \n" << cartesianVelocities<< std::endl;
 
-                std::cout << "modelVelocities is of size "<<modelVelocities.rows()<<"x"<<modelVelocities.cols()<<"\n";
-                std::cout << "modelVelocities is \n" << modelVelocities<< std::endl;
+                std::cout << "[MOTION_MODEL] modelVelocities is of size "<<modelVelocities.rows()<<"x"<<modelVelocities.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] modelVelocities is \n" << modelVelocities<< std::endl;
+                std::cout << "[MOTION_MODEL] modelVelCov is of size "<<modelVelCov.rows()<<"x"<<modelVelCov.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] modelVelCov is \n" << modelVelCov<< std::endl;
+                std::cout << "[MOTION_MODEL] The absolute squared error is:\n" << squaredError << std::endl;
+                std::cout << "[MOTION_MODEL] The relative error is:\n" << leastSquaresError << std::endl;
                 #endif
 
 
