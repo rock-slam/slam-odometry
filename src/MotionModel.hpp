@@ -1,10 +1,16 @@
 /**\file MotionModel.hpp
  *
- * This clase provided a Motion Model solver to any mobile robot (wheel or leg)
+ * This clase provided a Motion Model solver for any mobile robot (wheel or leg)
  * with articulated joints.
  *
- * TO-DO: Document how to use the class and how to properly set the template values
- * with some robot examples.
+ * The solver is based on Weigthed Least-Squares as minimizing the error to estimate the
+ * resulting motion from a robot Jacobian. Robot jacobian is understood as the sparse Jacobian
+ * matrix containing one jacobian per each Tree of the Robot.
+ * Therefore is a minimizing problem of a non-linear system which has been previously linearized
+ * around the working point (robot current joint position values). This is represented in the
+ * current Jacobian matrix of the robot.
+ * This class uses the KinematicModel abtsract class to access the robot Jacobian
+ * and compute the statistical motion model (estimated volocities/navigation quantities).
  *
  * Further Details at:  P.Muir et. al Kinematic Modeling of Wheeled Mobile Robots
  *                      M. Tarokh et. al Kinematics Modeling and Analyses of Articulated Rovers
@@ -20,10 +26,10 @@
 #ifndef ODOMETRY_MOTION_MODEL_HPP
 #define ODOMETRY_MOTION_MODEL_HPP
 
-#include <iostream>
-#include <vector> //! For std vector
-#include <boost/shared_ptr.hpp> //! For std shared pointer
-#include <base/logging.h> //! Log meassges
+#include <iostream> /** for std::cout TO-DO REMOVE **/
+#include <vector> /** For std vector **/
+#include <boost/shared_ptr.hpp> /** For std shared pointer **/
+#include <base/logging.h> /** Log meassges **/
 #include <Eigen/Geometry> /** Eigen data type for Matrix, Quaternion, etc... */
 #include <Eigen/Core> /** Core methods of Eigen implementation **/
 #include <Eigen/Dense> /** for the algebra and transformation matrices **/
@@ -35,18 +41,54 @@
 
 namespace odometry
 {
+    /** A struct
+     * Struct for the contact points
+     */
     struct TreeContactPoint
     {
-        /** Number of contact point of this tree. It cannot be zero or negative **/
+        /** Number of contact points of the tree. It cannot be negative, zero if the Tree does not have contact **/
         unsigned int number;
 
-        /** Point in contact between 0 and (number-1) or NO_CONTACT if the case **/
+        /** Point in contact between 0 and (number-1) or NO_CONTACT if the
+         * case of this tree does not have contact **/
         int contactId;
 
         TreeContactPoint()
             : number(1), contactId(0) {}
     };
 
+    /**@class MotionModel
+     *
+     * Motion Model solver class
+     *
+     * @param _Scalar: is the typename of your desired implementation (float, double, etc..)
+     * @param _RobotTrees: is the number of independent Trees connected to your desired Body Center.
+     *              Trees is understood as connection of kinematics chains. As an example:
+     *              <a href="http://robotik.dfki-bremen.de/en/forschung/robotersysteme/asguard-ii.html">Asguard</a>
+     *              hybrid wheels model as Trees. Therefore Asguard has 4 Trees. Each Tree has 5 open
+     *              kinematics chains, one per each foot which are potential points in contact with
+     *              the ground.
+     * @param _RobotJointDoF: Complete number of DoF in the Joint Space of your robot.This is every joint
+     *              passive or active that your robot (or the part of your robot related to odometry)
+     *              has. This is required to teh Jacobian in a a general form. Therefore, this would
+     *              be the part of th enumber of columns in the Kinematic Model Jacobian.
+     * @param _SlipDoF: The number of DoF than you want to model the slip of the contact point. If you
+     *           are not interested to model slip velocity/displacement set it to zero. Otherwise,
+     *           a common slip model has 3DoF (in X an Y direction and Z rotation)
+     * @param _ContactDoF: This is the angle of contact between the gound and the contact point. If it 
+     *              is not interesting for you model (i.e: the robot moves in indoor environment)
+     *              set it to zero. Otherwise in uneven terrains normally is modeled as 1DoF along th
+     *              pitch axis.
+     *
+     * Note that it is very important how you especify the number of Trees according to the contact points.
+     * It is assumed that one Tree can only have one single point of contact with the ground at the same time.
+     * Therefore, if your real/physical kinematic Tree can have more than one contact point at a time (e.g: two)
+     * the Tree needs to be split according to it (e.g: two Trees).
+     * Take <a href="http://robotik.dfki-bremen.de/en/forschung/robotersysteme/asguard-ii.html">Asguard</a> wheel
+     * as an example. If we want to model the wheel as two feet can have point in contact, two Trees
+     * needs to be created in the wheel (virtualy increasing the number of Trees).
+     *
+     */
     template <typename _Scalar, int _RobotTrees, int _RobotJointDoF, int _SlipDoF, int _ContactDoF>
     class MotionModel
     {
@@ -59,26 +101,41 @@ namespace odometry
             /** Pointer to the kinematic model **/
             typedef boost::shared_ptr< KinematicModel <_Scalar, _RobotTrees, _RobotJointDoF, _SlipDoF, _ContactDoF> > kinematics_ptr;
 
-            /** Types **/
+            /** An Enum
+             * Store the different algorithm to find the point which are in contact.
+             * In the case of having external means to define the point in contact with the groung
+             * (i.e: map represenation) this is not very important.
+             * If the cpoint in contact is computed only using the current kinematic configuration
+             * of the robot, then it is important.
+             */
             enum methodContactPoint
             {
                 LOWEST_POINT  = 0,
                 COMBINATORICS  = 1
             };
 
-            methodContactPoint contactSelection; /** Method to select the contact points **/
-            kinematics_ptr robotModel; /** Kinematic model of a robot **/
-            std::vector<Eigen::Affine3d> fkRobot; /** Forward kinematics of the robot chains **/
-            std::vector<base::Matrix6d> fkCov; /** Uncertainty of the forward kinematics (if any) **/
-            std::vector<TreeContactPoint> contactPoints; /** Number and point in contact per each tree of the model **/
+            methodContactPoint contactSelection; /**< Method to select the contact points */
+            kinematics_ptr robotModel; /**< Kinematic model of a robot */
+            std::vector<Eigen::Affine3d> fkRobot; /**< Forward kinematics of the robot chains */
+            std::vector<base::Matrix6d> fkCov; /**< Uncertainty of the forward kinematics (if any) */
+            std::vector<TreeContactPoint> contactPoints; /**< Number and point in contact per each tree of the model */
 
         protected:
 
+            /* This function is deprecated
             bool contactPointComparison(Eigen::Affine3d fkRobot1, Eigen::Affine3d fkRobot2)
             {
                 return fkRobot1.translation()[2] < fkRobot2.translation()[2];
-            }
+            }*/
 
+            /**@brief computes the current set of points in contact choosing the lowest point.
+             *
+             * This function uses the lowest point w.r.t the local Z axis to compute
+             * the points in contact for the robot. One point per Tree.
+             * It stores the result in the contact point member of the class.
+             *
+             * @return void
+             */
             void lowestPointInContact()
             {
                 register int j = 0;
@@ -99,7 +156,7 @@ namespace odometry
                             }
                         }
                     }
-                    else if ((*it).number == 1) /** If there is only one contact point then it is that one **/
+                    else if ((*it).number == 1) /** If there is only one contact point then it is that one making contact **/
                     {
                         contactPoints[j].contactId = 0;
                     }
@@ -124,11 +181,25 @@ namespace odometry
                 return;
             }
 
+            /**@brief Computes th epoints in contact using combinatorics
+             *
+             * Probabilitistic combinatoric method to compute the points in
+             * contact for the robot. One point in contact per Tree.
+             *
+             * TO-DO
+             *
+             * @return void
+             */
             void combinatoricsPointInContact()
             {
                 return;
             }
 
+            /**@brief this method computes the point in contact depending on the method.
+             *
+             * @param method enum variable with the desired method to compute the points in contact
+             *
+             */
             void selectPointsInContact(MotionModel::methodContactPoint method)
             {
 
@@ -152,6 +223,28 @@ namespace odometry
                return;
             }
 
+            /**@brief Forms the Navigation Equations for the navigation kinematics
+             *
+             * It assumes that know quantities are angular rotations (cartesian) and joint velocities.
+             * non-slip in the X and Y axis. Only slip inteh z-axis (non-holonomic constrian)
+             * The unknow quatities are position of the robot in cartesian, the contact angle and the
+             * z value of the slip vector.
+             * The output system of equation is unknownA*unknownx = knownB * knowny
+             * The parameters are in the general dimension for the problem, therefore unknow quatities
+             * are set to NaN in the parameters of the method.
+             *
+             * @param[in] cartesianVelocities Eigen vector with the cartesian velocities (w.r.t local body frame).
+             * @param[in] modelVelocities Eigen vector with the velocities of the model(joint, slip
+             *            and contact angle)
+             * @param[in] J robot jacobian matrix.
+             * @param[in] cartesianVelCov uncertainty in the measurement of the cartesianVelocities vector.
+             * @param[in] modelVelCov uncertainty in the measurement of the modelVelocities vector.
+             * @param[out] unknownA is the matrix of unknow quantities.
+             * @param[out] unknownx in the vector of unknow quantities.
+             * @param[out] knownB is the matrix of know quantities
+             * @param[out] knowny is the matrix of know quantities
+             * @param[out] Weight matrix with the inverse of the noise for the equation (Weigthed Least-Squares).
+             */
             inline void navEquations(const Eigen::Matrix <_Scalar, 6, 1> &cartesianVelocities,
                                     const Eigen::Matrix <_Scalar, MODEL_DOF, 1> &modelVelocities,
                                     const Eigen::Matrix <_Scalar, 6*_RobotTrees, MODEL_DOF> &J,
@@ -218,10 +311,21 @@ namespace odometry
 
         public:
 
+            /**@brief Default constructor.
+             */
             MotionModel()
             {
             }
 
+            /**@brief Constructor
+             *
+             * Constructs the Motion Model object with the parameters.
+             *
+             * @param[out] status, true if everything went well.
+             * @param[in] method of the points in contact selection algorithm
+             * @param[in] pointer to teh object with the Kinematic Model of the robot.
+             *
+             */
             MotionModel(bool &status, MotionModel::methodContactPoint method,  kinematics_ptr robotModel)
             {
                 std::vector<unsigned int> numberContactPoints (_RobotTrees, 0);
@@ -278,10 +382,18 @@ namespace odometry
                 return;
             }
 
+            /**@brief Default destructor
+             */
             ~MotionModel()
             {
             }
 
+            /**@brief Updates the Kinematic Model of the robot.
+             *
+             * It computs the Forward Kienmatics of the robot and update the points in contacts.
+             *
+             * @param[in] modelPositions, the vector with the model positions (joints, slip, contact angle).
+             */
             void updateKinematics (const Eigen::Matrix <_Scalar, MODEL_DOF, 1> &modelPositions)
             {
                 register int i=0;
@@ -308,6 +420,12 @@ namespace odometry
                 return;
             }
 
+
+            /**@brief Returns the kinematic of the robot
+             *
+             * @param[out] robot forward kinematics as a vector of affine transformations (one per Tree)
+             * @param[out] covariance of the trasnformation.
+             */
             inline virtual void getKinematics (std::vector<Eigen::Affine3d> &currentFkRobot, std::vector<base::Matrix6d> &currentFkCov)
             {
                 currentFkRobot = this->fkRobot;
@@ -316,6 +434,11 @@ namespace odometry
                 return;
             }
 
+            /**@brief Return the current points in contact
+             *
+             * @return vector of points in contact for the robot (point per Tree)
+             * in teh same order that the Trees are specify.
+             */
             virtual std::vector< int > getPointsInContact ()
             {
                 register int i=0;
@@ -331,7 +454,17 @@ namespace odometry
             }
 
 
-
+            /**@bief Solver for the Navigation equations
+             *
+             * This method get the robot Jacoian matrix, then it computes the Navigation
+             * kinematics equations to finally solve the Weighting Least-Square method.
+             *
+             * @param[in] modelPositions, position values of the model (joints, slip and contact angle)
+             * @param[in, out] cartesianVelocities, velocities of the robot cartesian space (w.r.t local body frame).
+             * @param[in] modelVelocities, velocity values of the model 9joints, slip and contact angle)
+             * @param[in] cartesianVelCov, uncertainty in the measurement of the robot (local body frame) cartesian velocities.
+             * @param[in] modelVelCov, uncertainty in the meassges of the robot model velocities.
+             */
             virtual double navSolver(const Eigen::Matrix <_Scalar, MODEL_DOF, 1> &modelPositions,
                                             Eigen::Matrix <_Scalar, 6, 1> &cartesianVelocities,
                                             Eigen::Matrix <_Scalar, MODEL_DOF, 1> &modelVelocities,
@@ -444,6 +577,9 @@ namespace odometry
                 return leastSquaresError;
             }
 
+            /**@brief Solver for the Slip equations
+             * TO-DO
+             */
             virtual base::Vector6d slipSolver(void)
             {
                 base::Vector6d s;
