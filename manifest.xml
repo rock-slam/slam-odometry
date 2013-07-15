@@ -8,5 +8,6 @@
   </description>
   <author>Jakob Schwendner/jakob.schwendner@dfki.de</author>
   <depend package="base/types" />
+  <depend package="gui/vizkit" optional="1" />
   <tags>needs_opt</tags>
 </package>
