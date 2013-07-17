@@ -62,8 +62,16 @@ base::Pose FootContact::getPoseDelta()
     return base::Pose( sampling.poseMean );
 }
 
-void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quaterniond& orientation)
+std::vector<contact_state>& FootContact::getContactStates()
 {
+    return contact_states;
+}
+
+void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quaterniond& orientation, const std::vector<float> &weights)
+{
+    // if there are weights, they need to have the same size as the points
+    assert( weights.empty() || weights.size() == bs.points.size() );
+
     // update state
     state.update( bs );
     this->orientation = orientation;
@@ -73,6 +81,28 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 	state.update( bs );
 	prevOrientation = orientation;
     }
+
+    // update vector of contact states
+    contact_states.resize( bs.points.size() );
+    for( size_t i=0; i < state.getPrevious().points.size(); i++ )
+    {
+	const odometry::BodyContactPoint &prevPoint( state.getPrevious().points[i] );
+	const odometry::BodyContactPoint &point( state.getCurrent().points[i] );
+
+	if( prevPoint.contact >= contact_threshold 
+		&& point.contact >= contact_threshold )
+	    contact_states[i] = CONTACT;
+	else if( prevPoint.contact < contact_threshold 
+		&& point.contact >= contact_threshold )
+	    contact_states[i] = TOUCHDOWN;
+	else if( prevPoint.contact >= contact_threshold 
+		&& point.contact < contact_threshold )
+	    contact_states[i] = LIFTOFF;
+	else if( prevPoint.contact < contact_threshold 
+		&& point.contact < contact_threshold )
+	    contact_states[i] = NO_CONTACT;
+    }
+    
 
     // get relative rotation between updates
     // this is assumed to be the correct rotation (with error of course)
@@ -88,7 +118,7 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
     const double contact_threshold = 0.5;
     Eigen::Vector3d sum = Eigen::Vector3d::Zero();
     double zeroCheck = 0;
-    int count = 0;
+    float count = 0;
     for( size_t i=0; i < state.getPrevious().points.size(); i++ )
     {
 	const odometry::BodyContactPoint &prevPoint( state.getPrevious().points[i] );
@@ -97,10 +127,11 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 	if( prevPoint.contact >= contact_threshold 
 		&& point.contact >= contact_threshold )
 	{
+	    float weight = weights.empty() ? 1.0 : weights[i];
 	    sum += prevPoint.position - delta_rotq * point.position;
 	    if( config.useZeroVelocity )
 		zeroCheck += (prevPoint.position - point.position).squaredNorm();
-	    count++;
+	    count += weight;
 	}
     }
     Eigen::Vector3d mean = sum;

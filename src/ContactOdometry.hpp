@@ -17,9 +17,17 @@ class FootContact :
     public base::odometry::Sampling2D
 {
 public:
+    enum contact_state
+    {
+	NO_CONTACT = 0,
+	TOUCHDOWN = 1,
+	CONTACT = 2,
+	LIFTOFF = 3
+    };
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     FootContact(const Configuration& config);
-    void update(const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation);
+    void update(const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation, const std::vector<float>& weights = std::vector<float>()  );
 
     base::Pose getPoseDelta();
     Eigen::Matrix3d getPositionError();
@@ -33,11 +41,15 @@ public:
     Eigen::Quaterniond orientation, prevOrientation;
     base::odometry::State<odometry::BodyContactState> state;
 
+    std::vector<contact_state>& getContactStates();
+
 private:
     /** Odometry configuration */
     Configuration config;
 
     GaussianSamplingPose3D sampling;
+
+    std::vector<contact_state> contact_states;
 };
 
 }
