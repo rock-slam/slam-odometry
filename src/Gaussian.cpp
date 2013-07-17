@@ -57,6 +57,17 @@ void GaussianSamplingPose3D::update( const Vector6d& mean, const Matrix6d& llt )
     poseLT = llt;
 }
 
+void GaussianSamplingPose3D::updateMean( const Vector6d& mean )
+{
+    poseMean = mean;
+}
+
+void GaussianSamplingPose3D::updateCholesky( const Matrix6d& llt )
+{
+    poseCov = llt * llt.transpose();
+    poseLT = llt;
+}
+
 base::Vector6d GaussianSamplingPose3D::sample()
 {
     Vector6d n;

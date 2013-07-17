@@ -25,9 +25,26 @@ public:
 	LIFTOFF = 3
     };
 
+    static const float contact_threshold = 0.5;
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     FootContact(const Configuration& config);
-    void update(const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation, const std::vector<float>& weights = std::vector<float>()  );
+    /**
+     * calls updateState, updateMean and updateCovariance methods
+     */
+    void update(const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation);
+    /**
+     * update the the bodystate and calculate the contact_states
+     */
+    void updateState( const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation );
+    /**
+     * calculate the mean based on the current state and the provided weights
+     */
+    void updateMean( const std::vector<float>& weights = std::vector<float>() );
+    /**
+     * update the covariance
+     */
+    void updateCovariance();
 
     base::Pose getPoseDelta();
     Eigen::Matrix3d getPositionError();
@@ -41,7 +58,7 @@ public:
     Eigen::Quaterniond orientation, prevOrientation;
     base::odometry::State<odometry::BodyContactState> state;
 
-    std::vector<contact_state>& getContactStates();
+    std::vector<FootContact::contact_state>& getContactStates();
 
 private:
     /** Odometry configuration */
@@ -50,6 +67,11 @@ private:
     GaussianSamplingPose3D sampling;
 
     std::vector<contact_state> contact_states;
+
+    Eigen::Quaterniond delta_rotq;
+    Eigen::Vector3d mean;
+
+    bool zeroVelocity;
 };
 
 }

@@ -42,6 +42,9 @@ public:
      *        cholesky from cov)
      */ 
     void update( const Vector6d& mean, const Matrix6d& llt );
+
+    void updateMean( const Vector6d& mean );
+    void updateCholesky( const Matrix6d& llt );
     /**
      * @brief get a pose sample based on mean and covariance provided by update
      */ 

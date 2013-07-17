@@ -62,22 +62,21 @@ base::Pose FootContact::getPoseDelta()
     return base::Pose( sampling.poseMean );
 }
 
-std::vector<contact_state>& FootContact::getContactStates()
+std::vector<FootContact::contact_state>& FootContact::getContactStates()
 {
     return contact_states;
 }
 
-void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quaterniond& orientation, const std::vector<float> &weights)
+void FootContact::updateState( const odometry::BodyContactState& bs, const Eigen::Quaterniond& orientation )
 {
-    // if there are weights, they need to have the same size as the points
-    assert( weights.empty() || weights.size() == bs.points.size() );
-
     // update state
     state.update( bs );
+    prevOrientation = this->orientation;
     this->orientation = orientation;
 
     if( !state.isValid() )
     {
+	// if there is only one sample, just copy it
 	state.update( bs );
 	prevOrientation = orientation;
     }
@@ -102,11 +101,16 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 		&& point.contact < contact_threshold )
 	    contact_states[i] = NO_CONTACT;
     }
-    
+}
+
+void FootContact::updateMean( const std::vector<float>& weights )
+{
+    // if there are weights, they need to have the same size as the points
+    assert( weights.empty() || weights.size() == state.getCurrent().points.size() );
 
     // get relative rotation between updates
     // this is assumed to be the correct rotation (with error of course)
-    Eigen::Quaterniond delta_rotq( prevOrientation.inverse() * orientation );
+    delta_rotq = prevOrientation.inverse() * orientation;
 
     // the translation we get from the fact, that we assume that contact points
     // with the environment stay static. We do this by rotating the current 
@@ -134,12 +138,24 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 	    count += weight;
 	}
     }
-    Eigen::Vector3d mean = sum;
+    mean = sum;
     if( count > 0 ) 
 	mean /= count;
 
-    base::Pose delta_pose( mean, delta_rotq );
+    const double zeroVelocityThreshold = 1e-9;
+    zeroVelocity = zeroCheck < zeroVelocityThreshold; 
 
+    // check for zeroVelocity
+    base::Pose delta_pose( mean, delta_rotq );
+    if( config.useZeroVelocity && zeroVelocity )
+	delta_pose = base::Pose();
+
+    // update the sampling object
+    sampling.updateMean( delta_pose.toVector6d() ); 
+}
+
+void FootContact::updateCovariance()
+{
     // calculate error matrix
     // TODO this is based on the wheel odometry error model I think it could be
     // more accurate by looking the the covariance of the contact position
@@ -155,17 +171,20 @@ void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quat
 	tilt * config.tiltError.toVector4d() +
 	dtheta * config.dthetaError.toVector4d();
 
-    const double zeroVelocityThreshold = 1e-9;
-    if( config.useZeroVelocity && zeroCheck < zeroVelocityThreshold )
-    {
-	delta_pose = base::Pose();
-	vec.setZero();
-    }
-
     Vector6d var;
     var << 0, 0, vec.w(), vec.head<3>();
+    
+    // check for zero velocity
+    if( config.useZeroVelocity && zeroVelocity )
+	vec.setZero();
 
-    sampling.update( delta_pose.toVector6d(), var.asDiagonal() );
+    // update sampling object
+    sampling.updateCholesky( var.asDiagonal() );
+}
 
-    prevOrientation = orientation;
+void FootContact::update(const odometry::BodyContactState& bs, const Eigen::Quaterniond& orientation)
+{
+    updateState( bs, orientation );
+    updateMean();
+    updateCovariance();
 }
