@@ -132,7 +132,7 @@ void FootContact::updateMean( const std::vector<float>& weights )
 		&& point.contact >= contact_threshold )
 	{
 	    float weight = weights.empty() ? 1.0 : weights[i];
-	    sum += prevPoint.position - delta_rotq * point.position;
+	    sum += (prevPoint.position - delta_rotq * point.position) * weight;
 	    if( config.useZeroVelocity )
 		zeroCheck += (prevPoint.position - point.position).squaredNorm();
 	    count += weight;
