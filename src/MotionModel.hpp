@@ -300,7 +300,7 @@ namespace odometry
                 knowny.template block<_RobotJointDoF, 1> (3,0) = modelVelocities.template block<_RobotJointDoF, 1> (0,0);
 
                 /** Compute the Weighting matrix: **/
-                /** TO-DO: It is based on the sensors noise cov matrices. I also could inlcude the attitude weigthing **/
+                /** TO-DO: It is based on the sensors noise cov matrices. I also could inlcude the attitude weighting **/
                 /** Form the noise of the know quantities: robot joint encoders + IMU ang. velo (3-axes) **/
                 //Eigen::Matrix <_Scalar, 3+_RobotJointDoF, 3+_RobotJointDoF> noiseQ;
 
