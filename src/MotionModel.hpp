@@ -6,11 +6,11 @@
  * The solver is based on Weigthed Least-Squares as minimizing the error to estimate the
  * resulting motion from a robot Jacobian. Robot jacobian is understood as the sparse Jacobian
  * matrix containing one jacobian per each Tree of the Robot.
- * Therefore is a minimizing problem of a non-linear system which has been previously linearized
+ * Therefore, it is a minimizing problem of a non-linear system which has been previously linearized
  * around the working point (robot current joint position values). This is represented in the
  * current Jacobian matrix of the robot.
- * This class uses the KinematicModel abtsract class to access the robot Jacobian
- * and compute the statistical motion model (estimated volocities/navigation quantities).
+ * This class uses the KinematicModel abtsract class (in this library) to access the robot Jacobian
+ * and compute the statistical motion model (estimated velocities/navigation quantities).
  *
  * Further Details at:  P.Muir et. al Kinematic Modeling of Wheeled Mobile Robots
  *                      M. Tarokh et. al Kinematics Modeling and Analyses of Articulated Rovers
@@ -34,10 +34,11 @@
 #include <Eigen/Core> /** Core methods of Eigen implementation **/
 #include <Eigen/Dense> /** for the algebra and transformation matrices **/
 #include <Eigen/Cholesky> /** For the Cholesky decomposition **/
+#include <Eigen/Dense> /** For accessing Matrixclock and corner amomg others**/
 #include "KinematicModel.hpp"
 
 
-#define DEBUG_PRINTS_ODOMETRY_MOTION_MODEL 1 //TO-DO: Remove this. Only for testing (master branch) purpose
+//#define DEBUG_PRINTS_ODOMETRY_MOTION_MODEL 1 //TO-DO: Remove this. Only for testing (master branch) purpose
 
 namespace odometry
 {
@@ -70,15 +71,15 @@ namespace odometry
      *              the ground.
      * @param _RobotJointDoF: Complete number of DoF in the Joint Space of your robot.This is every joint
      *              passive or active that your robot (or the part of your robot related to odometry)
-     *              has. This is required to teh Jacobian in a a general form. Therefore, this would
-     *              be the part of th enumber of columns in the Kinematic Model Jacobian.
+     *              has. This is required for the Jacobian in a general form. Therefore, this would
+     *              be part of the number of columns in the Kinematic Model Jacobian.
      * @param _SlipDoF: The number of DoF than you want to model the slip of the contact point. If you
      *           are not interested to model slip velocity/displacement set it to zero. Otherwise,
      *           a common slip model has 3DoF (in X an Y direction and Z rotation)
-     * @param _ContactDoF: This is the angle of contact between the gound and the contact point. If it 
+     * @param _ContactDoF: This is the angle of contact between the ground and the contact point. If this
      *              is not interesting for you model (i.e: the robot moves in indoor environment)
-     *              set it to zero. Otherwise in uneven terrains normally is modeled as 1DoF along th
-     *              pitch axis.
+     *              set it to zero. Otherwise, for navigation on uneven terrains, it is normally modeled as 1DoF along the
+     *              axis of the pitch angle of your robot.
      *
      * Note that it is very important how you especify the number of Trees according to the contact points.
      * It is assumed that one Tree can only have one single point of contact with the ground at the same time.
@@ -94,7 +95,11 @@ namespace odometry
     {
         public:
             static const unsigned int MAX_CHAIN_DOF = _RobotJointDoF+_SlipDoF+_ContactDoF;
+
+            /** This is also the order of storage of the values. Columns of the robot Jacobian (J) */
             static const unsigned int MODEL_DOF = _RobotJointDoF+_RobotTrees*(_SlipDoF+_ContactDoF);
+
+            /** The potentical contact point of the kineatic chain  does not have contact **/
             static const int NO_CONTACT = -1;
 
         public:
@@ -103,9 +108,9 @@ namespace odometry
 
             /** An Enum
              * Store the different algorithm to find the point which are in contact.
-             * In the case of having external means to define the point in contact with the groung
+             * In the case of having external means to define the point in contact with the ground
              * (i.e: map represenation) this is not very important.
-             * If the cpoint in contact is computed only using the current kinematic configuration
+             * If the point in contact is computed only using the current kinematic configuration
              * of the robot, then it is important.
              */
             enum methodContactPoint
@@ -225,12 +230,12 @@ namespace odometry
 
             /**@brief Forms the Navigation Equations for the navigation kinematics
              *
-             * It assumes that know quantities are angular rotations (cartesian) and joint velocities.
-             * non-slip in the X and Y axis. Only slip inteh z-axis (non-holonomic constrian)
+             * It assumes that known quantities are angular rotations (cartesian) and joint velocities.
+             * non-slip in the X and Y axis. Only slip in z-axis (non-holonomic constrain)
              * The unknow quatities are position of the robot in cartesian, the contact angle and the
              * z value of the slip vector.
-             * The output system of equation is unknownA*unknownx = knownB * knowny
-             * The parameters are in the general dimension for the problem, therefore unknow quatities
+             * The system of equations is unknownA * unknownx = knownB * knowny
+             * The parameters are stored in the general dimension for the problem, therefore unknow quatities
              * are set to NaN in the parameters of the method.
              *
              * @param[in] cartesianVelocities Eigen vector with the cartesian velocities (w.r.t local body frame).
@@ -294,16 +299,32 @@ namespace odometry
                 knowny.template block<3, 1> (0,0) = cartesianVelocities.template block<3, 1> (3,0);
                 knowny.template block<_RobotJointDoF, 1> (3,0) = modelVelocities.template block<_RobotJointDoF, 1> (0,0);
 
-                /** Form the Weighting matrix **/
+                /** Compute the Weighting matrix: **/
+                /** TO-DO: It is based on the sensors noise cov matrices. I also could inlcude the attitude weigthing **/
+                /** Form the noise of the know quantities: robot joint encoders + IMU ang. velo (3-axes) **/
+                //Eigen::Matrix <_Scalar, 3+_RobotJointDoF, 3+_RobotJointDoF> noiseQ;
+
+                /** NOTE: the first element in the vector/matrix of known quantities are the joint values (encoders). Have a look to MODEL_DOF **/
+                //noiseQ.template block < _RobotJointDoF, _RobotJointDoF > (0,0) = modelVelCov.template block< _RobotJointDoF, _RobotJointDoF > (0,0);
+
+                /** The inertial rotation from gyroscopes. The cartesian velocities are stored in the order: first linear and then angular **/
+                //noiseQ.bottomRightCorner<3,3>() = cartesianVelCov.bottomRightCorner<3,3>();
+
+                //Weight = (knownB * noiseQ.inverse() * knownB.transpose()).inverse();
+                //Weight = 0.5 * (Weight + Weight.transpose());
+
+                /** For the time being set it to a constant Identity matrix **/
                 Weight.setIdentity();
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
                 std::cout<< "[MOTION_MODEL] spareI is of size "<<spareI.rows()<<"x"<<spareI.cols()<<"\n";
-                std::cout << "[MOTION_MODEL] The spareI matrix \n" << spareI << std::endl;
+                std::cout<< "[MOTION_MODEL] The spareI matrix:\n" << spareI << std::endl;
                 std::cout<< "[MOTION_MODEL] unknownA is of size "<<unknownA.rows()<<"x"<<unknownA.cols()<<"\n";
-                std::cout << "[MOTION_MODEL] The unknownA matrix \n" << unknownA << std::endl;
+                std::cout<< "[MOTION_MODEL] The unknownA matrix:\n" << unknownA << std::endl;
                 std::cout<< "[MOTION_MODEL] knownB is of size "<<knownB.rows()<<"x"<<knownB.cols()<<"\n";
-                std::cout << "[MOTION_MODEL] The knownB matrix \n" << knownB << std::endl;
+                std::cout<< "[MOTION_MODEL] The knownB matrix:\n" << knownB << std::endl;
+                std::cout<< "[MOTION_MODEL] Weight is of size "<<Weight.rows()<<"x"<<Weight.cols()<<"\n";
+                std::cout<< "[MOTION_MODEL] The Weight matrix:\n" << Weight << std::endl;
                 #endif
 
                 return;
@@ -456,14 +477,19 @@ namespace odometry
 
             /**@bief Solver for the Navigation equations
              *
-             * This method get the robot Jacoian matrix, then it computes the Navigation
+             * This method get the robot Jacoian matrix and computes the Navigation
              * kinematics equations to finally solve the Weighting Least-Square method.
+             *
+             * The Navigation kinematics euation form A * x = B * y
+             * This method(navigation solver) perform the solution to the system above, solving:
+             *
+             *               x = (A^T * W * A)^(-1) * A^T * W * B * y
              *
              * @param[in] modelPositions, position values of the model (joints, slip and contact angle)
              * @param[in, out] cartesianVelocities, velocities of the robot cartesian space (w.r.t local body frame).
              * @param[in] modelVelocities, velocity values of the model 9joints, slip and contact angle)
              * @param[in] cartesianVelCov, uncertainty in the measurement of the robot (local body frame) cartesian velocities.
-             * @param[in] modelVelCov, uncertainty in the meassges of the robot model velocities.
+             * @param[in] modelVelCov, uncertainty in the meassurement of the robot model velocities (joint space).
              */
             virtual double navSolver(const Eigen::Matrix <_Scalar, MODEL_DOF, 1> &modelPositions,
                                             Eigen::Matrix <_Scalar, 6, 1> &cartesianVelocities,
@@ -471,14 +497,14 @@ namespace odometry
                                             Eigen::Matrix <_Scalar, 6, 6> &cartesianVelCov,
                                             Eigen::Matrix <_Scalar, MODEL_DOF, MODEL_DOF> &modelVelCov)
             {
-                double leastSquaresError = std::numeric_limits<double>::quiet_NaN(); //solution error of the Least-Squares
+                double normalizedError = std::numeric_limits<double>::quiet_NaN(); //solution error of the Least-Squares
                 std::vector<_Scalar> vectorPositions(MODEL_DOF, 0); // model positions in std_vector form
                 Eigen::Matrix <_Scalar, 6*_RobotTrees, MODEL_DOF> J; // Robot Jacobian
                 Eigen::Matrix <_Scalar, 6*_RobotTrees, 3+_RobotTrees+(_RobotTrees*_ContactDoF)> unknownA; // Nav non-sensed values matrix
                 Eigen::Matrix <_Scalar, 3+_RobotTrees+(_RobotTrees*_ContactDoF), 1> unknownx; // Nav non-sensed values vector
                 Eigen::Matrix <_Scalar, 6*_RobotTrees, 3+_RobotJointDoF> knownB; // Nav sensed values matrix
                 Eigen::Matrix <_Scalar, 3+_RobotJointDoF, 1> knowny; // Nav sensed values vector
-                Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees> Weight; // (Sensor noise)^(-1) and Trees Weighting matrix
+                Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees> Weight; // (Sensor noise)^(-1) and Trees Weighting matrix (which robot's tree has more weight to the computation).
 
                 /** Initialize  variables **/
                 unknownA.setZero(); unknownx.setZero();
@@ -501,7 +527,7 @@ namespace odometry
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
                 std::cout<< "[MOTION_MODEL] J is of size "<<J.rows()<<"x"<<J.cols()<<"\n";
-                std::cout << "[MOTION_MODEL] The J matrix \n" << J << std::endl;
+                std::cout<< "[MOTION_MODEL] The J matrix \n" << J << std::endl;
                 #endif
 
                 /** Form the Composite Navigation Equations and Noise Covariance **/
@@ -540,41 +566,47 @@ namespace odometry
                 /** Error of the solution **/
                 Eigen::Matrix<double, 1,1> squaredError = (((unknownA*unknownx - knownb).transpose() * Weight * (unknownA*unknownx - knownb)));
                 if (knownb.norm() != 0.00)
-                    leastSquaresError = sqrt(squaredError[0]) / knownb.norm();
+                    normalizedError = sqrt(squaredError[0]) / knownb.norm();
 
                 /** Save the results in the parameters (NaN previous values are now known quantities) **/
                 cartesianVelocities.template block<3, 1>(0,0) = unknownx.template block<3, 1>(0,0); // Linear velocities
-                cartesianVelCov.template block<3, 3> (0,0) = pseudoInvUnknownA.template block<3, 3> (0,0);//Linear Velocities noise
+                cartesianVelCov.template block<3, 3> (0,0) = squaredError[0] * Eigen::Matrix<_Scalar, 3, 3>::Identity();//pseudoInvUnknownA.template block<3, 3> (0,0);//Linear Velocities noise
 
                 /** Non-holonomic constraint Slip vector **/
                 for (register int i=0; i<_RobotTrees; ++i)
                 {
                     modelVelocities[_RobotJointDoF+(_SlipDoF*(i+1)-1)] = unknownx[3+i];
-                    modelVelCov.col(_RobotJointDoF+(_SlipDoF*(i+1)-1))[_RobotJointDoF+(_SlipDoF*(i+1)-1)] = pseudoInvUnknownA.col(3+i)[3+i];
+                    modelVelCov.col(_RobotJointDoF+(_SlipDoF*(i+1)-1))[_RobotJointDoF+(_SlipDoF*(i+1)-1)] = squaredError[0];//pseudoInvUnknownA.col(3+i)[3+i]; For the time being set the error to the error in the estimation
                 }
 
                 /** Contact angles per each Tree **/
                 for (register int i=0; i<(_RobotTrees*_ContactDoF); ++i)
                 {
                     modelVelocities[_RobotJointDoF+(_RobotTrees*_SlipDoF)+i] = unknownx[3+_RobotTrees+i];
-                    modelVelCov.col(_RobotJointDoF+(_RobotTrees*_SlipDoF)+i)[_RobotJointDoF+(_RobotTrees*_SlipDoF)+i] = pseudoInvUnknownA.col(3+_RobotTrees+i)[3+_RobotTrees+i];
+                    modelVelCov.col(_RobotJointDoF+(_RobotTrees*_SlipDoF)+i)[_RobotJointDoF+(_RobotTrees*_SlipDoF)+i] = squaredError[0];//pseudoInvUnknownA.col(3+_RobotTrees+i)[3+_RobotTrees+i];
                 }
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
                 std::cout << "[MOTION_MODEL] L-S solution:\n"<<unknownx<<std::endl;
+
                 std::cout << "[MOTION_MODEL] cartesianVelocities is of size "<<cartesianVelocities.rows()<<"x"<<cartesianVelocities.cols()<<"\n";
                 std::cout << "[MOTION_MODEL] cartesianVelocities is \n" << cartesianVelocities<< std::endl;
 
+                std::cout << "[MOTION_MODEL] cartesianVelCov is of size "<<cartesianVelCov.rows()<<"x"<<cartesianVelCov.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] cartesianVelCov is \n" << cartesianVelCov<< std::endl;
+
                 std::cout << "[MOTION_MODEL] modelVelocities is of size "<<modelVelocities.rows()<<"x"<<modelVelocities.cols()<<"\n";
                 std::cout << "[MOTION_MODEL] modelVelocities is \n" << modelVelocities<< std::endl;
+
                 std::cout << "[MOTION_MODEL] modelVelCov is of size "<<modelVelCov.rows()<<"x"<<modelVelCov.cols()<<"\n";
                 std::cout << "[MOTION_MODEL] modelVelCov is \n" << modelVelCov<< std::endl;
-                std::cout << "[MOTION_MODEL] The absolute squared error is:\n" << squaredError << std::endl;
-                std::cout << "[MOTION_MODEL] The relative error is:\n" << leastSquaresError << std::endl;
+
+                std::cout << "[MOTION_MODEL] The absolute least squared error is:\n" << squaredError << std::endl;
+                std::cout << "[MOTION_MODEL] The relative error is:\n" << normalizedError << std::endl;
                 #endif
 
 
-                return leastSquaresError;
+                return normalizedError;
             }
 
             /**@brief Solver for the Slip equations
