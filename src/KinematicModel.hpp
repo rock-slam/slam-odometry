@@ -8,30 +8,36 @@
  * joint values (chain configuration). The wheelJacobian or legJacobian works in velocity space
  * and gives information of each wheel/leg contact point to the contribution of the movement
  * (rover angular and linear velocities).
- * It has been designed to use together with the MotionModel Solver (Least-Squares solver)
  *
- * It first computes the forward kinematics in order to have afterwards the Robot Jacobian.
+ * It has been designed to use together with the MotionModel Solver (Least-Squares solver) imple
+ * mented in the MOtionModel.hpp file of this library.
+ *
+ * It should first compute the forward kinematics in order to have afterwards the Robot Jacobian.
+ * Neither the forward kinematics nor the Jacobian are provided by this class since this is an
+ * abstract class and the kinematics is platform dependent. Your class should make this job.
+ *
+ *
+ * The rational behind is to have a wrapper abstract class to solve the statistical motion model
+ * of any complex robot. The goal is for odometry (localization) purpose in a unify way.
+ * The real implemenetation of the Robot Kinematic Model which would inherits from this class can use
+ * any method. This means that either analytical or numerical solutions can be internaly apply.
+ * An example of numerical solution is the KDL library. An example of analytical is your own closed-form.
+ * Since forward kinematics is normaly quite easy to get an analytical form is recomended.
+ * However, if your robot kinematics is complex
+ * and for control purpose you have a Tree structure representation for numerical
+ * inverse kinematics in KDL/or similar. Perhaps, it is worthy to wrap this kinematic tree
+ * implementation with this class.
+ *
+ * Anyway, the important aspect is to commit the interface. The nomenclature attempts to be generic.
+ * An important issue with respect to a conventional kinematics is that a 3D slip vector
+ * is modeled as part of the DoF of the kinematics in the form of displacement/rotation
+ * vector (x, y and rot theta). Located at the frame between the robot contact point (feet/wheel)
+ * and the ground.
  *
  * Further Details at:  P.Muir et. al Kinematic Modeling of Wheeled Mobile Robots
  *                      M. Tarokh et. al Kinematics Modeling and Analyses of Articulated Rovers
  *                      J. Hidalgo et. al Kinematics Modeling of a Hybrid Wheeled-Leg Planetary Rover
  *                      J. Hidalgo, Navigation and Slip Kinematics for High Performance Motion Models
- *
- * The rational behind is to have a wrapper abstract class to solve the statistical motion model
- * of any complex robot. The goal is for odometry purpose in a unify way.
- * The real implemenetation of the Robot Kinematic Model which would inherits from this class can use
- * any method. This means that either analytical or numerical solutions can be internaly apply.
- * Example of numerical solution is the KDL library and analytical is your own closed-form.
- * Since forward kinematics is normaly quite easy to get, which is the main prupose of this class in 
- * odometry package, an analytical form is recomended. However, if your robot kinematics is complex
- * and for control purpose you have a Tree structire representation like that one in KDL for numerical
- * inverse kinematics. It is worthy to like this common kinematic tree implementation to this class
- * for odometry.
- *
- * The important aspect is to commit the interface. The nomenclature attempts to be generic.
- * An important issue with respect to convetional kinematics is that the slip vectot
- * is modeled as DoF of the kiematics as displacement/rotation vector at the points
- * in contact between the robot and the ground.
  *
  * @author Javier Hidalgo Carrio | DFKI RIC Bremen | javier.hidalgo_carrio@dfki.de
  * @date May 2013.
@@ -67,16 +73,19 @@ namespace odometry
      * @param _SlipDoF: The number of DoF than you want to model the slip of the contact point. If you
      *           are not interested to model slip velocity/displacement set it to zero. Otherwise,
      *           a common slip model has 3DoF (in X an Y direction and Z rotation)
-     * @param _ContactDoF: This is the angle of contact between the gound and the contact point. If it 
+     * @param _ContactDoF: This is the angle of contact between the ground and the contact point. If it 
      *              is not interesting for you model (i.e: the robot moves in indoor environment)
      *              set it to zero. Otherwise in uneven terrains normally is modeled as 1DoF along th
-     *              pitch axis.
+     *              pitch axis. For walking robots it could have 2DoF one along the Y axis/Pitch at the feet frame
+     *              (dominant when moving forward) and another along the X axis/Roll at the feet frame
+     *              (dominant when moving sideways).
      *
      * Note that it is very important how you especify the number of Trees according to the contact points.
      * It is assumed that one Tree can only have one single point of contact with the ground at the same time.
      * Therefore, if your real/physical kinematic Tree can have more than one contact point at a time (e.g: two)
      * the Tree needs to be split according to it (e.g: two Trees).
-     * Take <a href="http://robotik.dfki-bremen.de/en/forschung/robotersysteme/asguard-ii.html">Asguard</a> wheel
+     *
+     * For example, taking <a href="http://robotik.dfki-bremen.de/en/forschung/robotersysteme/asguard-ii.html">Asguard</a> wheel
      * as an example. If we want to model the wheel as two feet can have point in contact, two Trees
      * needs to be created in the wheel (virtualy increasing the number of Trees).
      *
