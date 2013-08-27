@@ -135,7 +135,7 @@ namespace odometry
 
             /**@brief computes the current set of points in contact choosing the lowest point.
              *
-             * This function uses the lowest point w.r.t the local Z axis to compute
+             * This function uses the lowest point w.r.t the local (robot body frame) Z axis to compute
              * the points in contact for the robot. One point per Tree.
              * It stores the result in the contact point member of the class.
              *
@@ -363,7 +363,7 @@ namespace odometry
                 /** Know the number of contact points per tree **/
                 robotModel->contactPointsPerTree(numberContactPoints);
 
-                /** Assign the type of method to select the contact points in contact **/
+                /** Assign the type of method to select the contact points actually in contact **/
                 this->contactSelection = method;
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
@@ -480,7 +480,7 @@ namespace odometry
              * This method get the robot Jacoian matrix and computes the Navigation
              * kinematics equations to finally solve the Weighting Least-Square method.
              *
-             * The Navigation kinematics euation form A * x = B * y
+             * The Navigation kinematics equation: A * x = B * y
              * This method(navigation solver) perform the solution to the system above, solving:
              *
              *               x = (A^T * W * A)^(-1) * A^T * W * B * y
@@ -568,22 +568,28 @@ namespace odometry
                 if (knownb.norm() != 0.00)
                     normalizedError = sqrt(squaredError[0]) / knownb.norm();
 
-                /** Save the results in the parameters (NaN previous values are now known quantities) **/
+                /** For the Error covariance matrix **/
+                Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees> errorCov; // L-S error covariance
+                Eigen::Matrix <_Scalar, 3+_RobotTrees+(_RobotTrees*_ContactDoF), 3+_RobotTrees+(_RobotTrees*_ContactDoF)> uncertaintyCov; // noise cov
+                errorCov = 0.6820 * squaredError[0] * Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees>::Identity();
+                uncertaintyCov = (unknownA.transpose() * errorCov.inverse() * unknownA).inverse();
+
+                /** Save the results in the parameters (previous NaN values are now just known quantities) **/
                 cartesianVelocities.template block<3, 1>(0,0) = unknownx.template block<3, 1>(0,0); // Linear velocities
-                cartesianVelCov.template block<3, 3> (0,0) = squaredError[0] * Eigen::Matrix<_Scalar, 3, 3>::Identity();//pseudoInvUnknownA.template block<3, 3> (0,0);//Linear Velocities noise
+                cartesianVelCov.template block<3, 3> (0,0) = uncertaintyCov.template block<3,3>(0,0);//squaredError[0] * Eigen::Matrix<_Scalar, 3, 3>::Identity();//pseudoInvUnknownA.template block<3, 3> (0,0);//Linear Velocities noise
 
                 /** Non-holonomic constraint Slip vector **/
                 for (register int i=0; i<_RobotTrees; ++i)
                 {
                     modelVelocities[_RobotJointDoF+(_SlipDoF*(i+1)-1)] = unknownx[3+i];
-                    modelVelCov.col(_RobotJointDoF+(_SlipDoF*(i+1)-1))[_RobotJointDoF+(_SlipDoF*(i+1)-1)] = squaredError[0];//pseudoInvUnknownA.col(3+i)[3+i]; For the time being set the error to the error in the estimation
+                    modelVelCov.col(_RobotJointDoF+(_SlipDoF*(i+1)-1))[_RobotJointDoF+(_SlipDoF*(i+1)-1)] = uncertaintyCov.col(3+i)[3+i];//pseudoInvUnknownA.col(3+i)[3+i]; For the time being set the error to the error in the estimation
                 }
 
                 /** Contact angles per each Tree **/
                 for (register int i=0; i<(_RobotTrees*_ContactDoF); ++i)
                 {
                     modelVelocities[_RobotJointDoF+(_RobotTrees*_SlipDoF)+i] = unknownx[3+_RobotTrees+i];
-                    modelVelCov.col(_RobotJointDoF+(_RobotTrees*_SlipDoF)+i)[_RobotJointDoF+(_RobotTrees*_SlipDoF)+i] = squaredError[0];//pseudoInvUnknownA.col(3+_RobotTrees+i)[3+_RobotTrees+i];
+                    modelVelCov.col(_RobotJointDoF+(_RobotTrees*_SlipDoF)+i)[_RobotJointDoF+(_RobotTrees*_SlipDoF)+i] = uncertaintyCov.col(3+_RobotTrees+i)[3+_RobotTrees+i];//pseudoInvUnknownA.col(3+_RobotTrees+i)[3+_RobotTrees+i];
                 }
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
