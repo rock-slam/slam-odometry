@@ -1,13 +1,16 @@
 #ifndef __ODOMETRY_ODOMETRY_HPP__
 #define __ODOMETRY_ODOMETRY_HPP__
 
-#include <base/time.h>
-#include <base/pose.h>
-#include <base/odometry.h>
+#include <base/Time.hpp>
+#include <base/Pose.hpp>
 
 #include <odometry/Gaussian.hpp>
 #include <odometry/Configuration.hpp>
 #include <odometry/BodyState.hpp>
+#include <odometry/State.hpp>
+#include <odometry/Gaussian3D.hpp>
+#include <odometry/Sampling3D.hpp>
+#include <odometry/Sampling2D.hpp>
 
 namespace odometry
 {
@@ -22,9 +25,9 @@ namespace odometry
      * quite easily.
      */
     class Skid4Odometry
-	: public odometry::Gaussian3D,
-	  public odometry::Sampling3D,
-	  public odometry::Sampling2D
+	: public Gaussian3D,
+	  public Sampling3D,
+	  public Sampling2D
     {
 	typedef base::Matrix6d Matrix6d;
 	typedef base::Vector6d Vector6d;
@@ -45,7 +48,7 @@ namespace odometry
 	 * @param bs encodes the change in wheel positions of the asgaurd
 	 * @param orientation body to world rotation provided by an IMU
 	 */
-	void update(const odometry::BodyState &bs, const Eigen::Quaterniond& orientation);
+	void update(const BodyState &bs, const Eigen::Quaterniond& orientation);
 
 	/** 
 	 * @brief provides the mean of the change in pose between the last two
@@ -121,7 +124,7 @@ namespace odometry
     public:
 	/** helper member to store the current and previous bodystates
 	 */
-	odometry::State<odometry::BodyState> state;
+	State<BodyState> state;
 
     private:
 	/** Odometry configuration */

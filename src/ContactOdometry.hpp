@@ -4,7 +4,10 @@
 #include <odometry/ContactState.hpp>
 #include <odometry/Gaussian.hpp>
 #include <odometry/Configuration.hpp>
-#include <base/odometry.h>
+#include <odometry/State.hpp>
+#include <odometry/Gaussian3D.hpp>
+#include <odometry/Sampling3D.hpp>
+#include <odometry/Sampling2D.hpp>
 
 namespace odometry
 {
@@ -12,9 +15,9 @@ typedef Eigen::Matrix<double,6,6> Matrix6d;
 typedef Eigen::Matrix<double,6,1> Vector6d;
 
 class FootContact : 
-    public base::odometry::Gaussian3D,
-    public base::odometry::Sampling3D,
-    public base::odometry::Sampling2D
+    public Gaussian3D,
+    public Sampling3D,
+    public Sampling2D
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -31,7 +34,7 @@ public:
     base::Pose2D getPoseDeltaSample2D();
 
     Eigen::Quaterniond orientation, prevOrientation;
-    base::odometry::State<odometry::BodyContactState> state;
+    State<BodyContactState> state;
 
 private:
     /** Odometry configuration */
