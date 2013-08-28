@@ -12,5 +12,10 @@ rock_library(odometry
 	    Gaussian.hpp
             KinematicModel.hpp
             MotionModel.hpp
+            State.hpp
+            Gaussian2D.hpp
+            Gaussian3D.hpp
+            Sampling2D.hpp
+            Sampling3D.hpp
     DEPS_PKGCONFIG base-types)
 
