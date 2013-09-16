@@ -7,6 +7,8 @@ FootContact::FootContact(const Configuration& config)
 {
 }
 
+FootContact::~FootContact() {}
+
 /** this function will return the transformation from the frame that is spanned
  * up the points p1, p2 and p3 to the global frame.  p1 is the origin of the
  * frame and p1-p2 the x axis.  further, p3 will be on the plane spanned up the

@@ -1,35 +1,34 @@
 #ifndef __ODOMETRY_ODOMETRY_HPP__
 #define __ODOMETRY_ODOMETRY_HPP__
 
-#include <base/time.h>
-#include <base/pose.h>
-#include <base/odometry.h>
+#include <base/Time.hpp>
+#include <base/Pose.hpp>
 
 #include <odometry/Gaussian.hpp>
 #include <odometry/Configuration.hpp>
 #include <odometry/BodyState.hpp>
+#include <odometry/State.hpp>
+#include <odometry/Gaussian3D.hpp>
+#include <odometry/Sampling3D.hpp>
+#include <odometry/Sampling2D.hpp>
 
 namespace odometry
 {
     /** @brief Class which provides a simple wheel (skid steering) odometry
-     * from asguard
      *
      * class is based on a simple skid steering model, where the change in
      * orientation is provided by an IMU, so effectively only the translation
      * comes from a change in wheel position.
-     *
-     * @note currently this class is specific to asguard, but can be made generic
-     * quite easily.
      */
-    class Skid4Odometry
-	: public odometry::Gaussian3D,
-	  public odometry::Sampling3D,
-	  public odometry::Sampling2D
+    class SkidOdometry
+	: public Gaussian3D,
+	  public Sampling3D,
+	  public Sampling2D
     {
+    public:
 	typedef base::Matrix6d Matrix6d;
 	typedef base::Vector6d Vector6d;
 
-    public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	/** 
 	 * @brief default constructor for wheel odometry class
@@ -37,15 +36,15 @@ namespace odometry
 	 * @param config odometry configuration class, mainly setting the error matrix
 	 * @param asguardConfig configuration of the asguard body model
 	 */
+	SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase);
 
-	Skid4Odometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase);
 	/** 
 	 * @brief update method which is called for each new measurement
 	 *
-	 * @param bs encodes the change in wheel positions of the asgaurd
+	 * @param d average of wheel distance travelled within the time step 
 	 * @param orientation body to world rotation provided by an IMU
 	 */
-	void update(const odometry::BodyState &bs, const Eigen::Quaterniond& orientation);
+	void update( double d, const Eigen::Quaterniond& orientation );
 
 	/** 
 	 * @brief provides the mean of the change in pose between the last two
@@ -109,21 +108,7 @@ namespace odometry
 	 */
 	base::Pose2D getPoseDeltaSample2D();
 
-	// DEPRECATED, PLEASE REMOVE.
-	// only use the interface defined in the base class.
-	// if interface not sufficient, discuss.
-	Eigen::Vector3d getTranslation();
-	Eigen::Vector3d getVelocity();
-	Eigen::Vector3d getAngularVelocity();
-	Eigen::Matrix3d getVelocityError();
-	double getDeltaYaw();
-
-    public:
-	/** helper member to store the current and previous bodystates
-	 */
-	odometry::State<odometry::BodyState> state;
-
-    private:
+    protected:
 	/** Odometry configuration */
 	Configuration config;
 
@@ -141,6 +126,75 @@ namespace odometry
 
 	Eigen::Quaterniond orientation, prevOrientation;
 	base::Pose pose;
+    };
+
+    /** @brief Class which provides a simple wheel (skid steering) odometry
+     * from asguard
+     *
+     * class is based on a simple skid steering model, where the change in
+     * orientation is provided by an IMU, so effectively only the translation
+     * comes from a change in wheel position.
+     *
+     * @note currently this class is specific to asguard, but can be made generic
+     * quite easily.
+     */
+    class Skid4Odometry
+	: public SkidOdometry 
+    {
+    public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+	/** 
+	 * @brief default constructor for wheel odometry class
+	 *
+	 * @param config odometry configuration class, mainly setting the error matrix
+	 * @param asguardConfig configuration of the asguard body model
+	 */
+	Skid4Odometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase);
+	/** 
+	 * @brief update method which is called for each new measurement
+	 *
+	 * @param bs encodes the change in wheel positions of the asgaurd
+	 * @param orientation body to world rotation provided by an IMU
+	 */
+	void update(const BodyState &bs, const Eigen::Quaterniond& orientation);
+
+	/**
+	 * @brief Provide the error covariance matrix for the current pose delta
+	 *
+	 * @result position error covariance as 3 matrix
+	 */
+	Eigen::Matrix3d getPositionError();
+	/**
+	 * @brief provide the orientation covariance matrix for the current
+	 *	  pose delta
+	 *
+	 * @result orientation error covariance as 3 matrix as axis/angle of
+	 *	   rotation
+	 */
+	Eigen::Matrix3d getOrientationError();
+
+	/**
+	 * @brief provide the error covariance matrix for the current pose delta
+	 *
+	 * @result error covariance as 6 matrix (see @class
+	 *	   GaussianSamplingPose3D for explanation)
+	 */
+	Matrix6d getPoseError();
+
+	// DEPRECATED, PLEASE REMOVE.
+	// only use the interface defined in the base class.
+	// if interface not sufficient, discuss.
+	Eigen::Vector3d getTranslation();
+	Eigen::Vector3d getVelocity();
+	Eigen::Vector3d getAngularVelocity();
+	Eigen::Matrix3d getVelocityError();
+	double getDeltaYaw();
+
+    public:
+	/** helper member to store the current and previous bodystates
+	 */
+	State<BodyState> state;
     };
 
 }
