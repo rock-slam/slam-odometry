@@ -647,11 +647,12 @@ namespace odometry
                 if (knownb.norm() != 0.00)
                     normalizedError = sqrt(squaredError[0]) / knownb.norm();
 
+
                 /** For the Error covariance matrix **/
-                Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees> errorCov; // L-S error covariance
+                Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees> errorCov = (unknownA*unknownx - knownb).asDiagonal(); errorCov *= errorCov;// L-S error covariance
                 Eigen::Matrix <_Scalar, 3+_RobotTrees+(_RobotTrees*_ContactDoF), 3+_RobotTrees+(_RobotTrees*_ContactDoF)> uncertaintyCov; // noise cov
-                errorCov = 0.6827 * squaredError[0] * Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees>::Identity();//! It takes 1-sigma of the error
-                uncertaintyCov = (unknownA.transpose() * errorCov.inverse() * unknownA).inverse();
+                uncertaintyCov = (unknownA.transpose() * errorCov.inverse() * unknownA).inverse(); // Observer
+                uncertaintyCov = 0.5*(uncertaintyCov + uncertaintyCov.transpose());// Guarantee symmetry
 
                 /** Save the results in the parameters (previous NaN values are now just known quantities) **/
                 cartesianVelocities.template block<3, 1>(0,0) = unknownx.template block<3, 1>(0,0); // Linear velocities
@@ -688,6 +689,8 @@ namespace odometry
 
                 std::cout << "[MOTION_MODEL] RESULT The absolute least squared error is:\n" << squaredError << std::endl;
                 std::cout << "[MOTION_MODEL] RESULT The relative error is:\n" << normalizedError << std::endl;
+                std::cout << "[MOTION_MODEL] RESULT The error vector is \n"<<(unknownA*unknownx - knownb)<<"\n";
+                std::cout << "[MOTION_MODEL] RESULT The error variance is \n"<<errorCov<<"\n";
                 #endif
 
 
