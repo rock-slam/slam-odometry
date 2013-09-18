@@ -35,10 +35,10 @@
 #include <Eigen/Dense> /** for the algebra and transformation matrices **/
 #include <Eigen/Cholesky> /** For the Cholesky decomposition **/
 #include <Eigen/Dense> /** For accessing Matrixblock and corner among others**/
-#include "KinematicModel.hpp"
+#include "KinematicModel.hpp" /** For the Kinematics Model abtract class **/
 
 
-#define DEBUG_PRINTS_ODOMETRY_MOTION_MODEL 1 //TO-DO: Remove this. Only for testing (master branch) purpose
+//#define DEBUG_PRINTS_ODOMETRY_MOTION_MODEL 1 //TO-DO: Remove this. Only for testing (master branch) purpose
 
 namespace odometry
 {
@@ -691,6 +691,7 @@ namespace odometry
                 std::cout << "[MOTION_MODEL] RESULT The relative error is:\n" << normalizedError << std::endl;
                 std::cout << "[MOTION_MODEL] RESULT The error vector is \n"<<(unknownA*unknownx - knownb)<<"\n";
                 std::cout << "[MOTION_MODEL] RESULT The error variance is \n"<<errorCov<<"\n";
+                std::cout << "[MOTION_MODEL] RESULT The solution covariance is \n"<<cartesianVelCov<<"\n";
                 #endif
 
 
