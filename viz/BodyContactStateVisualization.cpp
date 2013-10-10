@@ -5,7 +5,7 @@
 #include <osg/ShapeDrawable>
 #include <osg/Shape>
 
-using namespace vizkit;
+using namespace vizkit3d;
 using namespace odometry;
 
 BodyContactStateVisualization::BodyContactStateVisualization()
