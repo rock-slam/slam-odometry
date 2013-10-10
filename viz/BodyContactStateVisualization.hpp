@@ -2,14 +2,14 @@
 #define ESLAM_BODYCONTACTSTATEVISUALIZATION_H
 
 #include <boost/noncopyable.hpp>
-#include <vizkit/Vizkit3DPlugin.hpp>
+#include <vizkit3d/Vizkit3DPlugin.hpp>
 #include <osg/Geode>
 #include <odometry/ContactState.hpp>
 
-namespace vizkit
+namespace vizkit3d
 {
     class BodyContactStateVisualization
-        : public vizkit::Vizkit3DPlugin<odometry::BodyContactState>
+        : public vizkit3d::Vizkit3DPlugin<odometry::BodyContactState>
         , boost::noncopyable
     {
     Q_OBJECT
