@@ -675,6 +675,9 @@ namespace odometry
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
                 std::cout << "[MOTION_MODEL] L-S solution:\n"<<unknownx<<std::endl;
 
+                std::cout << "[MOTION_MODEL] RESULT uncertaintyCov is of size "<<uncertaintyCov.rows()<<"x"<<uncertaintyCov.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] RESULT uncertaintyCov is \n" << uncertaintyCov << std::endl;
+
                 std::cout << "[MOTION_MODEL] RESULT cartesianVelocities is of size "<<cartesianVelocities.rows()<<"x"<<cartesianVelocities.cols()<<"\n";
                 std::cout << "[MOTION_MODEL] RESULT cartesianVelocities is \n" << cartesianVelocities<< std::endl;
 
@@ -691,6 +694,7 @@ namespace odometry
                 std::cout << "[MOTION_MODEL] RESULT The relative error is:\n" << normalizedError << std::endl;
                 std::cout << "[MOTION_MODEL] RESULT The error vector is \n"<<(unknownA*unknownx - knownb)<<"\n";
                 std::cout << "[MOTION_MODEL] RESULT The error variance is \n"<<errorCov<<"\n";
+                std::cout << "[MOTION_MODEL] RESULT The error variance.inverse() is \n"<<errorCov.inverse()<<"\n";
                 std::cout << "[MOTION_MODEL] RESULT The solution covariance is \n"<<cartesianVelCov<<"\n";
                 #endif
 
@@ -848,6 +852,16 @@ namespace odometry
                 return s;
             }
     };
+
+    /**
+    * @brief Check if NaN values
+    */
+    template<typename _Derived>
+    static inline bool isnotnan(const Eigen::MatrixBase<_Derived>& x)
+    {
+        return ((x.array() == x.array())).all();
+    };
+
 }
 
 #endif //ODOMETRY_MOTION_MODEL_HPP
