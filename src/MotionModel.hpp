@@ -299,20 +299,6 @@ namespace odometry
                 knowny.template block<3, 1> (0,0) = cartesianVelocities.template block<3, 1> (3,0);
                 knowny.template block<_RobotJointDoF, 1> (3,0) = modelVelocities.template block<_RobotJointDoF, 1> (0,0);
 
-                /** Compute the Weighting matrix: **/
-                /** TO-DO: It is based on the sensors noise cov matrices. I also could include the attitude weighting **/
-                /** Form the noise of the know quantities: robot joint encoders + IMU ang. velo (3-axes) **/
-                //Eigen::Matrix <_Scalar, 3+_RobotJointDoF, 3+_RobotJointDoF> noiseQ;
-
-                /** NOTE: the first element in the vector/matrix of known quantities are the joint values (encoders). Have a look to MODEL_DOF **/
-                //noiseQ.template block < _RobotJointDoF, _RobotJointDoF > (0,0) = modelVelCov.template block< _RobotJointDoF, _RobotJointDoF > (0,0);
-
-                /** The inertial rotation from gyroscopes. The Cartesian velocities are stored in the order: first linear and then angular **/
-                //noiseQ.bottomRightCorner<3,3>() = cartesianVelCov.bottomRightCorner<3,3>();
-
-                //Weight = (knownB * noiseQ.inverse() * knownB.transpose()).inverse();
-                //Weight = 0.5 * (Weight + Weight.transpose());
-
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
                 std::cout<< "[MOTION_MODEL] spareI is of size "<<spareI.rows()<<"x"<<spareI.cols()<<"\n";
                 std::cout<< "[MOTION_MODEL] The spareI matrix:\n" << spareI << std::endl;
@@ -648,7 +634,7 @@ namespace odometry
                     normalizedError = sqrt(squaredError[0]) / knownb.norm();
 
 
-                /** For the Error covariance matrix **/
+                /** Error covariance matrix **/
                 Eigen::Matrix <_Scalar, 6*_RobotTrees, 6*_RobotTrees> errorCov = (unknownA*unknownx - knownb).asDiagonal(); errorCov *= errorCov;// L-S error covariance
                 Eigen::Matrix <_Scalar, 3+_RobotTrees+(_RobotTrees*_ContactDoF), 3+_RobotTrees+(_RobotTrees*_ContactDoF)> uncertaintyCov; // noise cov
                 uncertaintyCov = (unknownA.transpose() * errorCov.inverse() * unknownA).inverse(); // Observer
@@ -656,7 +642,16 @@ namespace odometry
 
                 /** Save the results in the parameters (previous NaN values are now just known quantities) **/
                 cartesianVelocities.template block<3, 1>(0,0) = unknownx.template block<3, 1>(0,0); // Linear velocities
-                cartesianVelCov.template block<3, 3> (0,0) = uncertaintyCov.template block<3,3>(0,0);//squaredError[0] * Eigen::Matrix<_Scalar, 3, 3>::Identity();//pseudoInvUnknownA.template block<3, 3> (0,0);//Linear Velocities noise
+                cartesianVelCov.template block<3, 3> (0,0) = uncertaintyCov.template block<3,3>(0,0);//Linear Velocities noise
+
+                /** Angular velocity estimated noise (experimental) **/
+                if (cartesianVelCov.template block<3, 3> (3,3) == Eigen::Matrix3d::Zero())
+                {
+                    for (register size_t i=0; i<_RobotTrees; ++i)
+                    {
+                        cartesianVelCov.template block<3, 3> (3,3) += Weight.template block<3,3> (3+(6*i), 3+(6*i)) * errorCov.template block<3,3> (3+(6*i),3+(6*i));//Angular Velocities noise
+                    }
+                }
 
                 /** Non-holonomic constraint Slip vector **/
                 for (register int i=0; i<_RobotTrees; ++i)
@@ -674,6 +669,9 @@ namespace odometry
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
                 std::cout << "[MOTION_MODEL] L-S solution:\n"<<unknownx<<std::endl;
+
+                std::cout << "[MOTION_MODEL] RESULT errorCov is of size "<<errorCov.rows()<<"x"<<errorCov.cols()<<"\n";
+                std::cout << "[MOTION_MODEL] RESULT errorCov is \n" << errorCov << std::endl;
 
                 std::cout << "[MOTION_MODEL] RESULT uncertaintyCov is of size "<<uncertaintyCov.rows()<<"x"<<uncertaintyCov.cols()<<"\n";
                 std::cout << "[MOTION_MODEL] RESULT uncertaintyCov is \n" << uncertaintyCov << std::endl;
