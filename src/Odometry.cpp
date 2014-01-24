@@ -8,28 +8,33 @@
 using namespace odometry;
 using namespace std;
 
-Skid4Odometry::Skid4Odometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase)
+SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase)
     : config( config ), wheelRadiusAvg(wheelRadiusAvg),  trackWidth(trackWidth), wheelBase(wheelBase), 
       bodyCenterCompensation( true ), sampling(config)
 {
 }
 
-void Skid4Odometry::setBodyCenterCompensation(bool compensate)
+Skid4Odometry::Skid4Odometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase)
+    : SkidOdometry( config, wheelRadiusAvg, trackWidth, wheelBase )
+{
+}
+
+void SkidOdometry::setBodyCenterCompensation(bool compensate)
 {
     bodyCenterCompensation = compensate;
 }
 
-base::Pose Skid4Odometry::getPoseDelta()
+base::Pose SkidOdometry::getPoseDelta()
 {
     return base::Pose( sampling.poseMean ); 
 }
 
-base::Pose Skid4Odometry::getPoseDeltaSample()
+base::Pose SkidOdometry::getPoseDeltaSample()
 {
     return base::Pose( sampling.sample() );
 }
 
-base::Pose2D Skid4Odometry::getPoseDeltaSample2D()
+base::Pose2D SkidOdometry::getPoseDeltaSample2D()
 {
     return projectPoseDelta( orientation, getPoseDeltaSample() );
 }
@@ -51,29 +56,22 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     const BodyState &state_kp(state.getCurrent());
     const BodyState &state_k(state.getPrevious());
 
-/*
-    printf("Wheels: %+3.3f %+3.3f %+3.3f %+3.3f \n",
-	state_kp.getWheelPos(REAR_LEFT),
-	state_kp.getWheelPos(REAR_RIGHT),
-	state_kp.getWheelPos(FRONT_RIGHT),
-	state_kp.getWheelPos(FRONT_LEFT)
-    );
-*/
-
     double d1n = (state_kp.getWheelPos(FRONT_LEFT) - state_k.getWheelPos(FRONT_LEFT) 
 	    + state_kp.getWheelPos(REAR_LEFT) - state_k.getWheelPos(REAR_LEFT) )/2.0*wheel_radius; // averaged left side distance 
     double d2n = (state_kp.getWheelPos(FRONT_RIGHT) - state_k.getWheelPos(FRONT_RIGHT) 
 	    + state_kp.getWheelPos(REAR_RIGHT) - state_k.getWheelPos(REAR_RIGHT) )/2.0*wheel_radius; // averaged left side distance 
+    double d = (d1n+d2n)/2;
 
+    SkidOdometry::update( d, orientation );
+}
+
+void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation )
+{
     double dx, dy, dtheta;
     
-    double d = (d1n+d2n)/2;
     Eigen::Quaterniond delta_rotq( prevOrientation.inverse() * orientation );
     Eigen::AngleAxisd delta_rot( delta_rotq ); 
 
-    //delta_rot * Eigen::AngleAxisd(1e-7,Eigen::Vector3d::UnitZ());
-    //printf("Delta Rot: %+3.3f %+1.5f %+1.5f",delta_rot.angle(), d1n, d2n);
-  
     if( delta_rot.angle() > 1e-8 )
     {
 	dtheta = (delta_rot.axis()*delta_rot.angle()).z();
@@ -81,9 +79,6 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
 	
 	dx = r*(sin(dtheta)); // displacement in x coord
 	dy = -r*(1-cos(dtheta)); // displacement in y coord
-    
-    //printf("Delta Pos: %+1.5f %+1.5f dtheta: %+1.5f r*sin(): %+1.5f r: %+1.5f d: %+1.5f\n", dx, dy, dtheta, r*sin(dtheta), r, d);
-
     }
     else
     {
@@ -93,7 +88,6 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     }
 
     base::Pose p(Eigen::Vector3d(dx, dy, 0), delta_rotq);
-    //base::Pose p(Eigen::Vector3d(dx, dy, 0), Eigen::Quaterniond(Eigen::AngleAxisd( dtheta, Eigen::Vector3d::UnitZ())));
     
     if( bodyCenterCompensation )
     {
@@ -111,20 +105,6 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     // calculate error matrix
     double tilt = acos(Eigen::Vector3d::UnitZ().dot(orientation*Eigen::Vector3d::UnitZ()));
 
-    /*
-    Eigen::Vector3d orientation_var(
-	    1e-5, 
-	    1e-5, 
-	    config.yawError
-	    );
-
-    Eigen::Vector3d translation_var(
-	    0.002+dtheta*0.2+d*0.1,
-	    0.005+tilt*0.02+d*0.5,
-	    0.001
-	    );
-	    */
-
     Eigen::Vector4d vec =
 	config.constError.toVector4d() +
 	d * config.distError.toVector4d() +
@@ -137,6 +117,21 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     sampling.update( pose.toVector6d(), var.asDiagonal() );
 
     prevOrientation = orientation;
+}
+
+Eigen::Matrix3d SkidOdometry::getPositionError()
+{
+    return sampling.poseCov.bottomRightCorner<3,3>();
+}
+
+Eigen::Matrix3d SkidOdometry::getOrientationError()
+{
+    return sampling.poseCov.topLeftCorner<3,3>();
+}
+
+base::Matrix6d SkidOdometry::getPoseError()
+{
+    return sampling.poseCov; 
 }
 
 Eigen::Matrix3d Skid4Odometry::getPositionError()

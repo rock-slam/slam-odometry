@@ -7,6 +7,6 @@ Name: @TARGET_NAME@
 Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 Requires: @DEPS_PKGCONFIG@
-Libs: -L${libdir} -l@TARGET_NAME@
+Libs: -L${libdir} -l@TARGET_NAME@ -lboost_system
 Cflags: -I${includedir}
 

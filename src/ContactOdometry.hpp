@@ -22,6 +22,7 @@ class FootContact :
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     FootContact(const Configuration& config);
+    virtual ~FootContact();
     void update(const odometry::BodyContactState& state, const Eigen::Quaterniond& orientation);
 
     base::Pose getPoseDelta();
