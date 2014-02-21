@@ -32,9 +32,8 @@
 #include <base/logging.h> /** Log message **/
 #include <Eigen/Geometry> /** Eigen data type for Matrix, Quaternion, etc... */
 #include <Eigen/Core> /** Core methods of Eigen implementation **/
-#include <Eigen/Dense> /** for the algebra and transformation matrices **/
+#include <Eigen/Dense> /** for the algebra and transformation matrices and accessing Matrixblock and corner among others**/
 #include <Eigen/Cholesky> /** For the Cholesky decomposition **/
-#include <Eigen/Dense> /** For accessing Matrixblock and corner among others**/
 #include "KinematicModel.hpp" /** For the Kinematics Model abtract class **/
 
 
