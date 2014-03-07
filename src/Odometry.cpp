@@ -72,7 +72,7 @@ void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation )
     Eigen::Quaterniond delta_rotq( prevOrientation.inverse() * orientation );
     Eigen::AngleAxisd delta_rot( delta_rotq ); 
 
-    if( delta_rot.angle() > 1e-8 )
+    if( delta_rot.angle() > 1e-8 && delta_rot.axis().z() > 1e-9)
     {
 	dtheta = (delta_rot.axis()*delta_rot.angle()).z();
 	double r = d/dtheta;
