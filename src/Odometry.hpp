@@ -11,6 +11,7 @@
 #include <odometry/Gaussian3D.hpp>
 #include <odometry/Sampling3D.hpp>
 #include <odometry/Sampling2D.hpp>
+#include <base/samples/joints.h>
 
 namespace odometry
 {
@@ -36,7 +37,8 @@ namespace odometry
 	 * @param config odometry configuration class, mainly setting the error matrix
 	 * @param asguardConfig configuration of the asguard body model
 	 */
-	SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase);
+	SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase,
+                     const std::vector<std::string> &leftWheelNames, const std::vector<std::string> &rightWheelNames);
 
 	/** 
 	 * @brief update method which is called for each new measurement
@@ -45,6 +47,14 @@ namespace odometry
 	 * @param orientation body to world rotation provided by an IMU
 	 */
 	void update( double d, const Eigen::Quaterniond& orientation );
+
+        /** 
+         * @brief update method which is called for each new measurement
+         *
+         * @param jbs encodes the current in wheel positions
+         * @param orientation body to world rotation provided by an IMU
+         */
+        void update(const base::samples::Joints &js, const Eigen::Quaterniond& orientation);
 
 	/** 
 	 * @brief provides the mean of the change in pose between the last two
@@ -125,7 +135,18 @@ namespace odometry
 	GaussianSamplingPose3D sampling;
 
 	Eigen::Quaterniond orientation, prevOrientation;
-	base::Pose pose;
+        base::Pose pose;
+        
+        State<base::samples::Joints> jointState;
+            
+        std::vector<std::string> leftWheelNames;
+        std::vector<std::string> rightWheelNames;
+
+        /**
+         * helper function that computes the mean distance 
+         * traveled by the specified actuators
+         * */
+        double getTranslation(const std::vector< std::string >& actuatorNames);
     };
 
     /** @brief Class which provides a simple wheel (skid steering) odometry
@@ -194,7 +215,7 @@ namespace odometry
     public:
 	/** helper member to store the current and previous bodystates
 	 */
-	State<BodyState> state;
+        State<BodyState> state;
     };
 
 }

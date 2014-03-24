@@ -8,14 +8,14 @@
 using namespace odometry;
 using namespace std;
 
-SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase)
+SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase, const vector< string >& leftWheelNames, const vector< string >& rightWheelNames)
     : config( config ), wheelRadiusAvg(wheelRadiusAvg),  trackWidth(trackWidth), wheelBase(wheelBase), 
-      bodyCenterCompensation( true ), sampling(config)
+      bodyCenterCompensation( true ), sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames)
 {
 }
 
 Skid4Odometry::Skid4Odometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase)
-    : SkidOdometry( config, wheelRadiusAvg, trackWidth, wheelBase )
+    : SkidOdometry( config, wheelRadiusAvg, trackWidth, wheelBase, std::vector<std::string>(), std::vector<std::string>())
 {
 }
 
@@ -63,6 +63,48 @@ void Skid4Odometry::update(const BodyState &bs, const Eigen::Quaterniond& orient
     double d = (d1n+d2n)/2;
 
     SkidOdometry::update( d, orientation );
+}
+
+double SkidOdometry::getTranslation(const vector< string >& actuatorNames)
+{
+    double posDiff = 0;
+    
+    for(std::vector<std::string>::const_iterator it = actuatorNames.begin();
+        it != actuatorNames.end(); it++)
+    {
+        base::JointState const &state(jointState.getCurrent()[*it]);
+        if(!state.hasPosition())
+        {
+            throw std::runtime_error("Skid: Error, actuator sample did not contain position reading");
+        }
+
+        base::JointState const &lastState(jointState.getPrevious()[*it]);
+        posDiff += state.position - lastState.position;
+    }
+    
+    return posDiff / actuatorNames.size() * wheelRadiusAvg;
+}
+
+void SkidOdometry::update(const base::samples::Joints& js, const Eigen::Quaterniond& orientation)
+{
+    jointState.update( js );
+    this->orientation = orientation;
+
+    if( !jointState.isValid() )
+    {
+        jointState.update( js );
+        prevOrientation = orientation;
+    }
+
+    // averaged left side distance 
+    double d1n = getTranslation(leftWheelNames);
+    
+    // averaged left side distance 
+    double d2n = getTranslation(rightWheelNames); 
+    double d = (d1n+d2n)/2;
+
+    SkidOdometry::update( d, orientation );
+    
 }
 
 void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation )
