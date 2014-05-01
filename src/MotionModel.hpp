@@ -599,7 +599,7 @@ namespace odometry
                         cartesianVelCov, modelVelCov, unknownA, unknownx, knownB, knowny, Weight);
 
                 /** Solve the Motion Model by Least-Squares (navigation kinematics) **/
-                Eigen::Matrix <_Scalar,3+_RobotTrees+(_RobotTrees*_ContactDoF), 3+_RobotTrees+(_RobotTrees*_ContactDoF)> pseudoInvUnknownA;
+                //Eigen::Matrix <_Scalar,3+_RobotTrees+(_RobotTrees*_ContactDoF), 3+_RobotTrees+(_RobotTrees*_ContactDoF)> pseudoInvUnknownA;
                 Eigen::Matrix <_Scalar, 6*_RobotTrees, 1> knownb = knownB*knowny;
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
@@ -624,8 +624,7 @@ namespace odometry
                 /*******************/
                 #endif
 
-                pseudoInvUnknownA = (unknownA.transpose() * Weight * unknownA).inverse();
-                unknownx = pseudoInvUnknownA * unknownA.transpose() * Weight * knownb;
+                unknownx = (unknownA.transpose() * Weight * unknownA).ldlt().solve(unknownA.transpose() * Weight * knownb);
 
                 /** Error of the solution **/
                 Eigen::Matrix<double, 1,1> squaredError = (((unknownA*unknownx - knownb).transpose() * Weight * (unknownA*unknownx - knownb)));
@@ -759,7 +758,7 @@ namespace odometry
                         cartesianVelCov, modelVelCov, unknownA, unknownx, knownB, knowny, Weight);
 
                 /** Solve the Motion Model by Least-Squares (navigation kinematics) **/
-                Eigen::Matrix <_Scalar,6+_RobotTrees+(_RobotTrees*_ContactDoF), 6+_RobotTrees+(_RobotTrees*_ContactDoF)> pseudoInvUnknownA;
+                //Eigen::Matrix <_Scalar,6+_RobotTrees+(_RobotTrees*_ContactDoF), 6+_RobotTrees+(_RobotTrees*_ContactDoF)> pseudoInvUnknownA;
                 Eigen::Matrix <_Scalar, 6*_RobotTrees, 1> knownb = knownB*knowny;
 
                 #ifdef DEBUG_PRINTS_ODOMETRY_MOTION_MODEL
@@ -784,8 +783,7 @@ namespace odometry
                 /*******************/
                 #endif
 
-                pseudoInvUnknownA = (unknownA.transpose() * Weight * unknownA).inverse();
-                unknownx = pseudoInvUnknownA * unknownA.transpose() * Weight * knownb;
+                unknownx = (unknownA.transpose() * Weight * unknownA).ldlt().solve(unknownA.transpose() * Weight * knownb);
 
                 /** Error of the solution **/
                 Eigen::Matrix<double, 1,1> squaredError = (((unknownA*unknownx - knownb).transpose() * Weight * (unknownA*unknownx - knownb)));
