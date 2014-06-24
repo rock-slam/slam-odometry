@@ -642,9 +642,10 @@ namespace odometry
                 cartesianVelocities.template block<3, 1>(0,0) = unknownx.template block<3, 1>(0,0); // Linear velocities
                 cartesianVelCov.template block<3, 3> (0,0) = uncertaintyCov.template block<3,3>(0,0);//Linear Velocities noise
 
-                /** Angular velocity estimated noise (experimental) **/
+                /** Angular velocity estimated noise (experimental). Get the uncertainty of the angular velocity from the LS covariance **/
                 if (cartesianVelCov.template block<3, 3> (3,3) == Eigen::Matrix3d::Zero())
                 {
+                    /** There is one per each _RobotTrees. errorCov is a 6*_RobotTrees x 6*_RobotTrees matrix dimension **/
                     for (register size_t i=0; i<_RobotTrees; ++i)
                     {
                         cartesianVelCov.template block<3, 3> (3,3) += Weight.template block<3,3> (3+(6*i), 3+(6*i)) * errorCov.template block<3,3> (3+(6*i),3+(6*i));//Angular Velocities noise
