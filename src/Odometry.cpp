@@ -109,26 +109,34 @@ void SkidOdometry::update(const base::samples::Joints& js, const Eigen::Quaterni
 
 void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation )
 {
-    double dx, dy, dtheta;
+    double dx, dy, dtheta, theta;
     
     Eigen::Quaterniond delta_rotq( prevOrientation.inverse() * orientation );
     Eigen::AngleAxisd delta_rot( delta_rotq ); 
-
+    
+    Eigen::AngleAxisd aa_orientation(orientation);
+    theta = (aa_orientation.axis()*aa_orientation.angle()).z(); // actual heading
+    dtheta = (delta_rot.axis()*delta_rot.angle()).z(); // difference between last and actual heading
+    
     if( delta_rot.angle() > 1e-8 && delta_rot.axis().z() > 1e-9)
     {
-	dtheta = (delta_rot.axis()*delta_rot.angle()).z();
-	double r = d/dtheta;
+        double r = d/dtheta;
 	
-	dx = r*(sin(dtheta)); // displacement in x coord
-	dy = -r*(1-cos(dtheta)); // displacement in y coord
+	dx = (r + trackWidth/2) * (sin(theta) - sin(theta-dtheta));
+	dy = (r + trackWidth/2) * (cos(theta-dtheta) - cos(theta));
+        
+        //dx = r*(sin(dtheta)); // displacement in x coord
+        //dy = -r*(1-cos(dtheta)); // displacement in y coord
     }
     else
     {
+	
     	dtheta = 0;
-    	dx = d;
-    	dy = 0;
+	dx = d * cos(theta - dtheta);
+	dy = d * sin(theta - dtheta);
+    	/*dx = d;
+    	dy = 0;*/
     }
-
     base::Pose p(Eigen::Vector3d(dx, dy, 0), delta_rotq);
     
     if( bodyCenterCompensation )
