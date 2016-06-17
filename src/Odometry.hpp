@@ -11,7 +11,7 @@
 #include <odometry/Gaussian3D.hpp>
 #include <odometry/Sampling3D.hpp>
 #include <odometry/Sampling2D.hpp>
-#include <base/samples/joints.h>
+#include <base/samples/Joints.hpp>
 
 namespace odometry
 {

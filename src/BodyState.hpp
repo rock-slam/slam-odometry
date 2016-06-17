@@ -1,7 +1,7 @@
 #ifndef __ODOMETRY_BODYSTATE_HPP__
 #define __ODOMETRY_BODYSTATE_HPP__
 
-#include <base/time.h>
+#include <base/Time.hpp>
 
 namespace odometry 
 {

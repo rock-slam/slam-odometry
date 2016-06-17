@@ -1,8 +1,8 @@
 #ifndef __ODOMETRY_CONFIGURATION_HPP__
 #define __ODOMETRY_CONFIGURATION_HPP__
 
-#include <base/time.h>
-#include <base/eigen.h>
+#include <base/Time.hpp>
+#include <base/Eigen.hpp>
 	
 namespace odometry {
 struct TranslationWithYaw

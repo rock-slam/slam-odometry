@@ -1,8 +1,8 @@
 #ifndef ODOMETRY_CONTACTSTATE_HPP__
 #define ODOMETRY_CONTACTSTATE_HPP__
 
-#include <base/eigen.h>
-#include <base/time.h>
+#include <base/Eigen.hpp>
+#include <base/Time.hpp>
 #include <vector>
 
 namespace odometry
