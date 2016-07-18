@@ -31,30 +31,55 @@ namespace odometry
 	typedef base::Vector6d Vector6d;
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-	/** 
-	 * @brief default constructor for wheel odometry class
-	 *
-	 * @param config odometry configuration class, mainly setting the error matrix
-	 * @param asguardConfig configuration of the asguard body model
-	 */
-	SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase,
+        /** 
+         * @brief default constructor for wheel odometry class
+         *
+         * @param config odometry configuration class, mainly setting the error matrix
+         */
+        SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase,
                      const std::vector<std::string> &leftWheelNames, const std::vector<std::string> &rightWheelNames);
-
-	/** 
-	 * @brief update method which is called for each new measurement
-	 *
-	 * @param d average of wheel distance travelled within the time step 
-	 * @param orientation body to world rotation provided by an IMU
-	 */
-	void update( double d, const Eigen::Quaterniond& orientation );
+        
+        /** 
+         * @brief Advanced constructor for wheel odometry class
+         *
+         * @param config odometry configuration class, mainly setting the error matrix
+         */
+        SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase,
+                     const std::vector<std::string> &leftWheelNames, const std::vector<std::string> &rightWheelNames,
+                     const std::vector<std::string> &leftSteeringNames, const std::vector<std::string> &rightSteeringNames);
 
         /** 
          * @brief update method which is called for each new measurement
          *
-         * @param jbs encodes the current in wheel positions
+         * @param diff average of wheel distance travelled within the time step in x and y
+         * @param orientation body to world rotation provided by an IMU
+         */
+        void update( Eigen::Vector2d diff, const Eigen::Quaterniond& orientation );
+        
+        /** 
+         * @brief update method which is called for each new measurement
+         *
+         * @param d average of wheel distance travelled within the time step 
+         * @param orientation body to world rotation provided by an IMU
+         */
+        void update( double d, const Eigen::Quaterniond& orientation );
+
+        /** 
+         * @brief update method which is called for each new measurement
+         *
+         * @param js encodes the current in wheel positions
          * @param orientation body to world rotation provided by an IMU
          */
         void update(const base::samples::Joints &js, const Eigen::Quaterniond& orientation);
+        
+                /** 
+         * @brief update method which is called for each new measurement
+         *
+         * @param jsw encodes the current in wheel positions
+         * @param jss encodes the current in steering positions
+         * @param orientation body to world rotation provided by an IMU
+         */
+        void update(const base::samples::Joints &jsw,const base::samples::Joints &jss, const Eigen::Quaterniond& orientation);
 
 	/** 
 	 * @brief provides the mean of the change in pose between the last two
@@ -138,15 +163,24 @@ namespace odometry
         base::Pose pose;
         
         State<base::samples::Joints> jointState;
+        State<base::samples::Joints> steeringJointState;
             
         std::vector<std::string> leftWheelNames;
         std::vector<std::string> rightWheelNames;
+        std::vector<std::string> leftSteeringNames;
+        std::vector<std::string> rightSteeringNames;
 
         /**
          * helper function that computes the mean distance 
          * traveled by the specified actuators
          * */
         double getTranslation(const std::vector< std::string >& actuatorNames);
+        
+        /**
+         * helper function that computes the mean angle
+         * of the specified actuators
+         * */
+        double getRotation(const std::vector< std::string >& actuatorNames);
     };
 
     /** @brief Class which provides a simple wheel (skid steering) odometry

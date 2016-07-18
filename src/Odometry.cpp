@@ -8,6 +8,15 @@
 using namespace odometry;
 using namespace std;
 
+SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase, const vector< string >& leftWheelNames, const vector< string >& rightWheelNames,
+                           const vector< string >& leftSteeringNames, const vector< string >& rightSteeringNames)
+                               : config( config ), wheelRadiusAvg(wheelRadiusAvg),  trackWidth(trackWidth), wheelBase(wheelBase), 
+                                bodyCenterCompensation( true ), sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames),
+                                leftSteeringNames(leftSteeringNames), rightSteeringNames(rightSteeringNames){
+
+}
+
+
 SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase, const vector< string >& leftWheelNames, const vector< string >& rightWheelNames)
     : config( config ), wheelRadiusAvg(wheelRadiusAvg),  trackWidth(trackWidth), wheelBase(wheelBase), 
       bodyCenterCompensation( true ), sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames)
@@ -85,6 +94,25 @@ double SkidOdometry::getTranslation(const vector< string >& actuatorNames)
     return posDiff / actuatorNames.size() * wheelRadiusAvg;
 }
 
+double SkidOdometry::getRotation(const vector< string >& actuatorNames)
+{
+    double rotation = 0;
+    for(std::vector<std::string>::const_iterator it = actuatorNames.begin();
+    it != actuatorNames.end(); it++)
+    {
+        base::JointState const &state(steeringJointState.getCurrent()[*it]);
+        if(!state.hasPosition())
+        {
+            throw std::runtime_error("Skid: Error, actuator sample did not contain position reading");
+        }
+        rotation += state.position;
+        
+    }
+    
+    return rotation / actuatorNames.size();
+}
+
+
 void SkidOdometry::update(const base::samples::Joints& js, const Eigen::Quaterniond& orientation)
 {
     jointState.update( js );
@@ -107,29 +135,56 @@ void SkidOdometry::update(const base::samples::Joints& js, const Eigen::Quaterni
     
 }
 
-void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation )
+void SkidOdometry::update(const base::samples::Joints& jsw, const base::samples::Joints& jss, const Eigen::Quaterniond& orientation)
 {
-    double dx, dy, dtheta;
+    jointState.update( jsw );
+    this->orientation = orientation;
+
+    if( !jointState.isValid() )
+    {
+        jointState.update( jsw );
+        prevOrientation = orientation;
+    }
+    steeringJointState.update(jss);
+    if( !steeringJointState.isValid()){
+        steeringJointState.update(jsw);
+        prevOrientation = orientation;
+    }
     
+    
+
+    // averaged left side distance 
+    double d1n = getTranslation(leftWheelNames);
+    
+    // averaged left side distance 
+    double d2n = getTranslation(rightWheelNames); 
+    double d = (d1n+d2n)/2;
+    
+    double r1 = getRotation(leftSteeringNames);
+    double r2 = getRotation(rightSteeringNames);
+    double r = (r1+r2)/2;
+    
+    Eigen::Vector2d v(d, 0);
+    Eigen::Rotation2D<double> rot(r);
+    
+
+    SkidOdometry::update( rot * v, orientation );
+    
+}
+
+void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation ){
+    update(Eigen::Vector2d(d, 0), orientation);
+}
+
+void SkidOdometry::update( Eigen::Vector2d diff, const Eigen::Quaterniond& orientation )
+{    
     Eigen::Quaterniond delta_rotq( prevOrientation.inverse() * orientation );
-    Eigen::AngleAxisd delta_rot( delta_rotq ); 
-
-    if( delta_rot.angle() > 1e-8 && delta_rot.axis().z() > 1e-9)
-    {
-	dtheta = (delta_rot.axis()*delta_rot.angle()).z();
-	double r = d/dtheta;
-	
-	dx = r*(sin(dtheta)); // displacement in x coord
-	dy = -r*(1-cos(dtheta)); // displacement in y coord
-    }
-    else
-    {
-    	dtheta = 0;
-    	dx = d;
-    	dy = 0;
-    }
-
-    base::Pose p(Eigen::Vector3d(dx, dy, 0), delta_rotq);
+    Eigen::Vector3d proj_x (delta_rotq * Eigen::Vector3d::UnitX());
+    const double dtheta = atan2(proj_x.y(), proj_x.x());
+    Eigen::Rotation2D<double> rot2d(dtheta);
+    diff = rot2d * diff;
+    
+    base::Pose p(Eigen::Vector3d(diff.x(), diff.y(), 0), delta_rotq);
     
     if( bodyCenterCompensation )
     {
@@ -149,7 +204,7 @@ void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation )
 
     Eigen::Vector4d vec =
 	config.constError.toVector4d() +
-	d * config.distError.toVector4d() +
+	diff.norm() * config.distError.toVector4d() +
 	tilt * config.tiltError.toVector4d() +
 	dtheta * config.dthetaError.toVector4d();
 
