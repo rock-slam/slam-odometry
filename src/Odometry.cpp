@@ -84,11 +84,17 @@ double SkidOdometry::getTranslation(const vector< string >& actuatorNames)
         base::JointState const &state(jointState.getCurrent()[*it]);
         if(!state.hasPosition())
         {
-            throw std::runtime_error("Skid: Error, actuator sample did not contain position reading");
+            if(!state.hasSpeed())
+                throw std::runtime_error("Skid: Error, actuator sample did not contain position nor speed reading");
+                            
+            //Hm, is it the speed of the current time, or the last state ?
+            posDiff += state.speed * jointState.getTimeDelta().toSeconds();
         }
-
-        base::JointState const &lastState(jointState.getPrevious()[*it]);
-        posDiff += state.position - lastState.position;
+        else
+        {
+            base::JointState const &lastState(jointState.getPrevious()[*it]);
+            posDiff += state.position - lastState.position;
+        }
     }
     
     return posDiff / actuatorNames.size() * wheelRadiusAvg;
