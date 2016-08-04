@@ -51,7 +51,7 @@
 
 #include <string> // std string library
 #include <vector> // std vector library
-#include <base/eigen.h> //base eigen of rock
+#include <base/Eigen.hpp> //base eigen of rock
 
 namespace odometry
 {
