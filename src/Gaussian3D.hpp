@@ -12,6 +12,8 @@ namespace odometry
     class Gaussian3D
     {
     public:
+
+    virtual ~Gaussian3D() {};
 	/**
 	 * return the pose delta in the body fixed frame of the previous
 	 * state. 

@@ -12,6 +12,7 @@ namespace odometry
     class Sampling3D
     {
     public:
+    virtual ~Sampling3D(){};
 	virtual base::Pose getPoseDeltaSample() = 0;
     };
 }

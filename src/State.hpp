@@ -17,6 +17,8 @@ namespace odometry
 	State() 
 	    : update_counter(0) {}
 
+    virtual ~State() {};
+
 	/** 
 	 * will set the current body state and store the previous state
 	 * to perform the odometry calculations.
