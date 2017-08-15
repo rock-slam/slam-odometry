@@ -11,7 +11,7 @@ using namespace std;
 SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase, const vector< string >& leftWheelNames, const vector< string >& rightWheelNames,
                            const vector< string >& leftSteeringNames, const vector< string >& rightSteeringNames)
                                : config( config ), wheelRadiusAvg(wheelRadiusAvg),  trackWidth(trackWidth), wheelBase(wheelBase), 
-                                bodyCenterCompensation( true ), sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames),
+                                sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames),
                                 leftSteeringNames(leftSteeringNames), rightSteeringNames(rightSteeringNames){
 
 }
@@ -19,18 +19,13 @@ SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, d
 
 SkidOdometry::SkidOdometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase, const vector< string >& leftWheelNames, const vector< string >& rightWheelNames)
     : config( config ), wheelRadiusAvg(wheelRadiusAvg),  trackWidth(trackWidth), wheelBase(wheelBase), 
-      bodyCenterCompensation( true ), sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames)
+      sampling(config), leftWheelNames(leftWheelNames), rightWheelNames(rightWheelNames)
 {
 }
 
 Skid4Odometry::Skid4Odometry(const Configuration& config, double wheelRadiusAvg, double trackWidth, double wheelBase)
     : SkidOdometry( config, wheelRadiusAvg, trackWidth, wheelBase, std::vector<std::string>(), std::vector<std::string>())
 {
-}
-
-void SkidOdometry::setBodyCenterCompensation(bool compensate)
-{
-    bodyCenterCompensation = compensate;
 }
 
 base::Pose SkidOdometry::getPoseDelta()
@@ -197,18 +192,7 @@ void SkidOdometry::update( Eigen::Vector2d diff, const Eigen::Quaterniond& orien
     
     base::Pose p(Eigen::Vector3d(diff.x(), diff.y(), 0), delta_rotq);
     
-    if( bodyCenterCompensation )
-    {
-	// assume the rotation to be in the center of the body, so we
-	// need to account for the fact that the body origin is in the 
-	// center of the front axis
-	Eigen::Affine3d t( p.toTransform() );
-	Eigen::Affine3d C_center2body( Eigen::Translation3d( Eigen::Vector3d(-wheelBase/2.0, 0, 0 ) ) );
-
-	pose = base::Pose( Eigen::Affine3d( C_center2body * t * C_center2body.inverse()) );
-    }
-    else
-	pose = p;
+    pose = p;
     
     // calculate error matrix
     double tilt = acos(Eigen::Vector3d::UnitZ().dot(orientation*Eigen::Vector3d::UnitZ()));

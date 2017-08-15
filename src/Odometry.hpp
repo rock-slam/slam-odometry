@@ -111,15 +111,6 @@ namespace odometry
 	 */
 	Matrix6d getPoseError();
 
-	/**
-	 * @brief flag if the rotation should be performed around the body
-	 *        center
-	 *
-	 * @param compensate if set to true, rotation will be performed around
-	 * the geometric center of asguard instead of using the body origin.
-	 */
-	void setBodyCenterCompensation(bool compensate);
-
     public:
 	/**
 	 * @brief get a 3d pose sample based on the current state of the
@@ -153,9 +144,6 @@ namespace odometry
 	double trackWidth;
 	/** distance between front and rear axle */
 	double wheelBase;
-
-	/** compensate for the body center being different to the rotation center */
-	bool bodyCenterCompensation;
 
 	GaussianSamplingPose3D sampling;
 
