@@ -1,3 +1,4 @@
+rock_find_qt5(Core)
 rock_vizkit_plugin(odometry-viz
     MOC BodyContactStateVisualization.cpp 
     DEPS odometry
