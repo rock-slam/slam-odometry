@@ -168,8 +168,9 @@ void SkidOdometry::update(const base::samples::Joints& jsw, const base::samples:
     vl = rotl * vl;
     vr = rotr * vr;
     
+    Eigen::Vector2d resultantVector ((vl+vr)/2);
 
-    SkidOdometry::update( vl + vr , orientation );
+    SkidOdometry::update( resultantVector , orientation );
     
     std::cout << "L dl: "<< dl << " rotl: " << rotl.angle() << std::endl;
     std::cout << "R dr: "<< dr << " rotr: " << rotr.angle() << std::endl;
