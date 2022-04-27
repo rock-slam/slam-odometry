@@ -41,5 +41,8 @@ namespace vizkit3d
 	osg::Vec4 contactColor;
 	int contactChannel;
     };
+
+    VizkitQtPlugin( BodyContactStateVisualization )
+
 }
 #endif
