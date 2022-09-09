@@ -128,7 +128,7 @@ void SkidOdometry::update(const base::samples::Joints& js, const Eigen::Quaterni
     // averaged left side distance 
     double d1n = getTranslation(leftWheelNames);
     
-    // averaged left side distance 
+    // averaged right side distance 
     double d2n = getTranslation(rightWheelNames); 
     double d = (d1n+d2n)/2;
 
@@ -171,12 +171,7 @@ void SkidOdometry::update(const base::samples::Joints& jsw, const base::samples:
     Eigen::Vector2d resultantVector ((vl+vr)/2);
 
     SkidOdometry::update( resultantVector , orientation );
-    
-    std::cout << "L dl: "<< dl << " rotl: " << rotl.angle() << std::endl;
-    std::cout << "R dr: "<< dr << " rotr: " << rotr.angle() << std::endl;
-    std::cout << "L vl: "<< vl<< std::endl;
-    std::cout << "R vr: "<< vr<< std::endl;
-    
+   
 }
 
 void SkidOdometry::update( double d, const Eigen::Quaterniond& orientation ){
